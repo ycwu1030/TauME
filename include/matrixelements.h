@@ -12,6 +12,19 @@ public:
     ME_Base_t() {}
     virtual ~ME_Base_t() {}
 
+    void set_momenta(std::vector<dlv_t> p_production_list, std::vector<dlv_t> p_taum_decays_list,
+                     std::vector<dlv_t> p_taup_decays_list) {
+        set_taum_decay_momenta(p_taum_decays_list);
+        set_taup_decay_momenta(p_taup_decays_list);
+        set_production_momenta(p_production_list);
+    }
+    // * Suppose the BSM contribution is proportional to some parameter c1;
+    // * ME2 = ME2_SM + c1 * ME2_Interference + c1^2 ME2_BSM;
+    double get_ME2_SM() const { return m_ME2[0]; }
+    double get_ME2_Interference() const { return m_ME2[1]; }
+    double get_ME2_BSM() const { return m_ME2[2]; }
+
+protected:
     virtual void set_production_momenta(
         std::vector<dlv_t> p_list) = 0;  // * User should make sure setting momenta for taupm decay first
     void set_taum_decay_momenta(std::vector<dlv_t> p_list) {
@@ -24,13 +37,7 @@ public:
         m_H_p = m_taup_decay.get_H();
         m_omega_p = m_taup_decay.get_omega();
     }
-    // * Suppose the BSM contribution is proportional to some parameter c1;
-    // * ME2 = ME2_SM + c1 * ME2_Interference + c1^2 ME2_BSM;
-    double get_ME2_SM() const { return m_ME2[0]; }
-    double get_ME2_Interference() const { return m_ME2[1]; }
-    double get_ME2_BSM() const { return m_ME2[2]; }
 
-protected:
     TAUM_DECAY_t m_taum_decay;
     TAUP_DECAY_t m_taup_decay;
 
@@ -51,6 +58,7 @@ public:
     ME_EDM_Re_t() {}
     ~ME_EDM_Re_t() {}
 
+protected:
     virtual void set_production_momenta(std::vector<dlv_t> p_list) override {
         clv_t _p_ep = ToComplex(p_list[0]);
         clv_t _p_em = ToComplex(p_list[1]);
