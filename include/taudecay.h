@@ -94,4 +94,83 @@ private:
     clv_t _p_pic;
 };
 
+namespace {
+inline double _lam_Kallen(double x, double y, double z) {
+    return x * x + y * y + z * z - 2.0 * x * y - 2.0 * y * z - 2.0 * z * x;
+}
+
+inline double _Pi_2body_decay(double m0, double mi, double mj) {
+    double m02 = m0 * m0;
+    double mi2 = mi * mi;
+    double mj2 = mj * mj;
+    double lam = _lam_Kallen(1.0, mi2 / m02, mj2 / m02);
+    return m0 / 2.0 * sqrt(lam);
+}
+
+inline double _Gamma_Rho(double Q2, double mass, double width) {
+    double Q = sqrt(Q2);
+    double P_pi_on_shell =
+        _Pi_2body_decay(mass, MPI0, MPI0);  // * ignore the difference of the mass between pi+- and pi0
+    double P_pi_off_shell = _Pi_2body_decay(Q, MPI0, MPI0);
+    return width * mass / Q * pow(P_pi_off_shell / P_pi_on_shell, 3);
+}
+
+inline cd_t _BW_RHO(double Q2, double mass, double width) {
+    cd_t I{0.0, 1.0};
+    return mass * mass / (mass * mass - Q2 - I * mass * _Gamma_Rho(Q2, mass, width));
+}
+
+inline cd_t _F_PI(double Q2) {
+    cd_t BW_RHO = _BW_RHO(Q2, MRHO, GAMMARHO);
+    cd_t BW_RHOP = _BW_RHO(Q2, MRHOP, GAMMARHOP);
+    return (BW_RHO + BETA * BW_RHOP) / (1.0 + BETA);
+}
+}  // namespace
+
+template <bool is_anti = false>
+class TauDecay_a1 : public TauDecay_t<is_anti> {
+public:
+    TauDecay_a1() {}
+    ~TauDecay_a1() {}
+
+protected:
+    virtual void _set_momenta(std::vector<dlv_t> p_list) override {
+        TauDecay_t<is_anti>::_p_nu_tau = ToComplex(p_list[0]);
+        _p_pi1 = ToComplex(p_list[1]);
+        _p_pi2 = ToComplex(p_list[2]);
+        _p_pi3 = ToComplex(p_list[3]);
+        _p_Q = _p_pi1 + _p_pi2 + _p_pi3;
+        _p_q13 = _p_pi1 + _p_pi3;
+        _p_q23 = _p_pi2 + _p_pi3;
+
+        double Q2 = real(_p_Q * _p_Q);
+
+        clv_t _q13 = _p_pi1 - _p_pi3;
+        double Q13sq = real(_p_q13 * _p_q13);
+        cd_t F13 = _F_PI(Q13sq);
+
+        clv_t _q23 = _p_pi2 - _p_pi3;
+        double Q23sq = real(_p_q23 * _p_q23);
+        cd_t F23 = _F_PI(Q23sq);
+
+        TauDecay_t<is_anti>::_p_tau = TauDecay_t<is_anti>::_p_nu_tau + _p_pi1 + _p_pi2 + _p_pi3;
+        TauDecay_t<is_anti>::_J =
+            (_q13 - (_p_Q.Dot(_q13) / Q2) * _p_Q) * F13 + (_q23 - (_p_Q.Dot(_q23) / Q2) * _p_Q) * F23;
+        // * When calculating J, I ignore some factor that won't affect the final results
+    }
+
+private:
+    // * tau -> nu pi1 pi2 pi3
+    // * with either
+    // * tau -> nu pi- pi- pi+
+    // * or
+    // * tau -> nu pi0 pi0 pi-
+    clv_t _p_pi1;
+    clv_t _p_pi2;
+    clv_t _p_pi3;
+    clv_t _p_q13;
+    clv_t _p_q23;
+    clv_t _p_Q;
+};
+
 #endif  // TAU_OO_TAUDECAY_FINALSTATES_H_
