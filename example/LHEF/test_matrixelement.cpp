@@ -65,9 +65,10 @@ int main(int argc, char const *argv[]) {
                 p_pim.SetPxPyPzE(px, py, pz, E);
             }
         }
-        ME.set_taum_decay_momenta({p_nutau_m, p_pim});
-        ME.set_taup_decay_momenta({p_nutau_p, p_pip});
-        ME.set_production_momenta({p_ep, p_em, p_taup, p_taum});
+        // ME.set_taum_decay_momenta({p_nutau_m, p_pim});
+        // ME.set_taup_decay_momenta({p_nutau_p, p_pip});
+        // ME.set_production_momenta({p_ep, p_em, p_taup, p_taum});
+        ME.set_momenta({p_ep, p_em, p_taup, p_taum}, {p_nutau_m, p_pim}, {p_nutau_p, p_pip});
         ME0 = ME.get_ME2_SM();
         ME1 = ME.get_ME2_Interference();
         ME2 = ME.get_ME2_BSM();

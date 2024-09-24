@@ -143,14 +143,14 @@ protected:
         _p_q13 = _p_pi1 + _p_pi3;
         _p_q23 = _p_pi2 + _p_pi3;
 
-        double Q2 = real(_p_Q * _p_Q);
+        double Q2 = real(_p_Q.Dot(_p_Q));
 
         clv_t _q13 = _p_pi1 - _p_pi3;
-        double Q13sq = real(_p_q13 * _p_q13);
+        double Q13sq = real(_p_q13.Dot(_p_q13));
         cd_t F13 = _F_PI(Q13sq);
 
         clv_t _q23 = _p_pi2 - _p_pi3;
-        double Q23sq = real(_p_q23 * _p_q23);
+        double Q23sq = real(_p_q23.Dot(_p_q23));
         cd_t F23 = _F_PI(Q23sq);
 
         TauDecay_t<is_anti>::_p_tau = TauDecay_t<is_anti>::_p_nu_tau + _p_pi1 + _p_pi2 + _p_pi3;
