@@ -1,6 +1,7 @@
 #include "LHEF.h"
-#include "tauoo.h"
+#include "tauamp/tauamp.h"
 
+using namespace tauamp;
 int main(int argc, char const *argv[]) {
     TChain *ch = new TChain("LHEF");
     for (size_t i = 2; i < argc; i++) {

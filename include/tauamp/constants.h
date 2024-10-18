@@ -2,6 +2,7 @@
 #ifndef TAU_OO_CONSTANTS_H_
 #define TAU_OO_CONSTANTS_H_
 
+namespace tauamp {
 #define MTAU 1.77
 #define MPIC 0.13957039
 #define MPI0 0.1349766
@@ -12,5 +13,6 @@
 #define MA1 1.23
 #define GAMMAA1 0.599
 #define BETA -0.145
+};  // namespace tauamp
 
 #endif  // TAU_OO_CONSTANTS_H_

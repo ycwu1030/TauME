@@ -6,6 +6,7 @@
 #include "constants.h"
 #include "utilities.h"
 
+namespace tauamp {
 template <bool is_anti = false>
 class TauDecay_t {
 public:
@@ -172,5 +173,7 @@ private:
     clv_t _p_q23;
     clv_t _p_Q;
 };
+
+}  // namespace tauamp
 
 #endif  // TAU_OO_TAUDECAY_FINALSTATES_H_

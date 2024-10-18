@@ -13,3 +13,7 @@ LHEF.o: LHEF.cpp
 
 %.x: %.cpp LHEF.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+
+clean:
+	rm -rf *.o
+	rm -rf *.x

@@ -6,6 +6,8 @@
 
 #include "Math/Vector4D.h"
 
+namespace tauamp {
+
 typedef std::complex<double> cd_t;
 typedef ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double>> dlv_t;
 typedef ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<cd_t>> clv_t;
@@ -342,5 +344,7 @@ T epsilon(const std::vector<T> &a, const std::vector<T> &b, const std::vector<T>
            a[3] * b[0] * c[1] * d[2] - a[3] * b[2] * c[0] * d[1] - a[3] * b[1] * c[2] * d[0];
     // return a * epsilon(b, c, d);
 }
+
+};  // namespace tauamp
 
 #endif  // TAU_OO_UTILITIES_H_

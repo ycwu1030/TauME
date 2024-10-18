@@ -6,6 +6,7 @@
 #include "constants.h"
 #include "utilities.h"
 
+namespace tauamp {
 template <class TAUM_DECAY_t, class TAUP_DECAY_t>
 class ME_Base_t {
 public:
@@ -278,4 +279,5 @@ protected:
     }
 };
 
+};  // namespace tauamp
 #endif  // TAU_OO_MATRIX_ELEMENTS_H_
