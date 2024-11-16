@@ -4,6 +4,7 @@
 #include <complex>
 #include <vector>
 
+#include "Math/GenVector/VectorUtil.h"
 #include "Math/Vector4D.h"
 
 namespace tauamp {

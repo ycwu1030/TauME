@@ -84,8 +84,8 @@ public:
 protected:
     virtual void _set_momenta(std::vector<dlv_t> p_list) override {
         TauDecay_t<is_anti>::_p_nu_tau = ToComplex(p_list[0]);
-        _p_pi0 = ToComplex(p_list[1]);
-        _p_pic = ToComplex(p_list[2]);
+        _p_pic = ToComplex(p_list[1]);
+        _p_pi0 = ToComplex(p_list[2]);
         TauDecay_t<is_anti>::_p_tau = TauDecay_t<is_anti>::_p_nu_tau + _p_pi0 + _p_pic;
         TauDecay_t<is_anti>::_J = _p_pic - _p_pi0;
     }
