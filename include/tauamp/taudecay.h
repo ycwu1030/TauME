@@ -8,6 +8,9 @@
 
 namespace tauamp {
 template <bool is_anti = false>
+// * |M|^2 ~ (omega + H.s) = omega*(1+h.s);
+// * Only h is needed for the calculation of spin correlation
+// * omega (and other coeff) is important when one wants to calculate the full matrix element
 class TauDecay_t {
 public:
     TauDecay_t() : _gamma_va(1.0) { _sign = is_anti ? -1.0 : 1.0; }
@@ -22,6 +25,7 @@ public:
     }
     cd_t get_omega() const { return _omega; }
     clv_t get_H() const { return _H; }
+    clv_t get_h() const { return _H / _omega; }
 
 protected:
     virtual void _set_momenta(
@@ -87,7 +91,7 @@ protected:
         _p_pic = ToComplex(p_list[1]);
         _p_pi0 = ToComplex(p_list[2]);
         TauDecay_t<is_anti>::_p_tau = TauDecay_t<is_anti>::_p_nu_tau + _p_pi0 + _p_pic;
-        TauDecay_t<is_anti>::_J = _p_pic - _p_pi0;
+        TauDecay_t<is_anti>::_J = (_p_pic - _p_pi0);
     }
 
 private:

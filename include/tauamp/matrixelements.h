@@ -7,6 +7,21 @@
 #include "utilities.h"
 
 namespace tauamp {
+
+// * Spin Analyser
+// * For the production of tau pair we have
+// * |M|^2 = A^2 (1 + u.sm + v.sp + sm.w.sp)
+// * u = u0 + u1 * c + u2 * c^2
+// * v = v0 + v1 * c + v2 * c^2
+// * w = w0 + w1 * c + w2 * c^2
+// * Where c is some BSM parameter
+// * For the decay:
+// *  tau-:
+// * |Mm|^2 = omegam ( 1 + hm.sm )
+// *  tau+:
+// * |Mp|^2 = omegap ( 1 + hp.sp )
+// * Then the total matrix element (up to some overall factor)
+// * |Mtot|^2 = A^2 omegam omegap ( 1 - u.hm - v.hp + hm.w.hp)
 template <class TAUM_DECAY_t, class TAUP_DECAY_t>
 class ME_Base_t {
 public:
@@ -270,6 +285,50 @@ protected:
                         2 * SP04 *
                             (SP13 * SP22 * SP56 - SP12 * SP32 * SP56 + 2 * SP32 * SP51 * SP62 - 2 * SP13 * SP52 * SP62 -
                              SP22 * SP51 * SP63 + SP12 * SP52 * SP63));
+
+        cd_t _omega_m = ME_Base_t<TAUM_DECAY_t, TAUP_DECAY_t>::m_omega_m;
+        cd_t _omega_p = ME_Base_t<TAUM_DECAY_t, TAUP_DECAY_t>::m_omega_p;
+        ME_Base_t<TAUM_DECAY_t, TAUP_DECAY_t>::m_ME2[0] = real(M01 * _omega_m * _omega_p - M11 - M21 + M31);
+        ME_Base_t<TAUM_DECAY_t, TAUP_DECAY_t>::m_ME2[1] = real(M02 * _omega_m * _omega_p - M12 - M22 + M32);
+        ME_Base_t<TAUM_DECAY_t, TAUP_DECAY_t>::m_ME2[2] = real(M03 * _omega_m * _omega_p - M13 - M23 + M33);
+    }
+};
+
+template <class TAUM_DECAY_t, class TAUP_DECAY_t>
+class ME_HiggsCPV_t : public ME_Base_t<TAUM_DECAY_t, TAUP_DECAY_t> {
+public:
+    ME_HiggsCPV_t() {}
+    ~ME_HiggsCPV_t() {}
+
+protected:
+    virtual void set_production_momenta(std::vector<dlv_t> p_list) override {
+        // * For h->tau+ tau-; only need tau+ and tau- momentum
+        clv_t _p_taup = ToComplex(p_list[2]);
+        clv_t _p_taum = ToComplex(p_list[3]);
+        clv_t _H_m = ME_Base_t<TAUM_DECAY_t, TAUP_DECAY_t>::m_H_m;
+        clv_t _H_p = ME_Base_t<TAUM_DECAY_t, TAUP_DECAY_t>::m_H_p;
+
+        cd_t SP23 = _H_m.Dot(_H_p);
+        cd_t SP21 = _H_m.Dot(_p_taup);
+        cd_t SP30 = _H_p.Dot(_p_taum);
+        cd_t SP01 = _p_taum.Dot(_p_taup);
+
+        cd_t EP2301 = epsilon(_H_m, _H_p, _p_taum, _p_taup);
+
+        cd_t M01 = SP01;
+        cd_t M02 = -MTAU * MTAU;
+        cd_t M03 = 0.0;
+
+        cd_t M11 = 0.0;
+        cd_t M12 = 0.0;
+        cd_t M13 = 0.0;
+        cd_t M21 = 0.0;
+        cd_t M22 = 0.0;
+        cd_t M23 = 0.0;
+
+        cd_t M31 = SP23 * MTAU * MTAU;
+        cd_t M32 = SP21 * SP30 - SP01 * SP23;
+        cd_t M33 = -EP2301;
 
         cd_t _omega_m = ME_Base_t<TAUM_DECAY_t, TAUP_DECAY_t>::m_omega_m;
         cd_t _omega_p = ME_Base_t<TAUM_DECAY_t, TAUP_DECAY_t>::m_omega_p;
