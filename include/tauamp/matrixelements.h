@@ -33,6 +33,10 @@ public:
         set_taum_decay_momenta(p_taum_decays_list);
         set_taup_decay_momenta(p_taup_decays_list);
         set_production_momenta(p_production_list);
+        // std::cout << "Hm: " << m_H_m << std::endl;
+        // std::cout << "Hp: " << m_H_p << std::endl;
+        // std::cout << "omegam: " << m_omega_m << std::endl;
+        // std::cout << "omegap: " << m_omega_p << std::endl;
     }
     // * Suppose the BSM contribution is proportional to some parameter c1;
     // * ME2 = ME2_SM + c1 * ME2_Interference + c1^2 ME2_BSM;
@@ -336,6 +340,52 @@ protected:
         ME_Base_t<TAUM_DECAY_t, TAUP_DECAY_t>::m_ME2[1] = real(M02 * _omega_m * _omega_p - M12 - M22 + M32);
         ME_Base_t<TAUM_DECAY_t, TAUP_DECAY_t>::m_ME2[2] = real(M03 * _omega_m * _omega_p - M13 - M23 + M33);
     }
+};
+
+class ME_CPV_rhorho {
+public:
+    ME_CPV_rhorho() {}
+    ~ME_CPV_rhorho() {}
+
+    void set_momenta(std::vector<dlv_t> p_production_list, std::vector<dlv_t> p_taum_decays_list,
+                     std::vector<dlv_t> p_taup_decays_list) {
+        set_decay_m_momenta(p_taum_decays_list);
+        set_decay_p_momenta(p_taup_decays_list);
+        set_production_momenta(p_production_list);
+    }
+
+    double get_A() const { return A; }
+    double get_B() const { return B; }
+    double get_C() const { return C; }
+
+private:
+    void set_decay_m_momenta(std::vector<dlv_t> p_taum_decays_list) {
+        dlv_t _p_nu_m = p_taum_decays_list[0];
+        dlv_t _p_pim = p_taum_decays_list[1];
+        dlv_t _p_pi0 = p_taum_decays_list[2];
+        dlv_t _J = _p_pim - _p_pi0;
+        km = 2.0 * (_J.Dot(_p_nu_m)) * _J - _J.Dot(_J) * _p_nu_m;
+    };
+    void set_decay_p_momenta(std::vector<dlv_t> p_taup_decays_list) {
+        dlv_t _p_nu_p = p_taup_decays_list[0];
+        dlv_t _p_pip = p_taup_decays_list[1];
+        dlv_t _p_pi0 = p_taup_decays_list[2];
+        dlv_t _J = _p_pip - _p_pi0;
+        kp = 2.0 * (_J.Dot(_p_nu_p)) * _J - _J.Dot(_J) * _p_nu_p;
+    };
+    void set_production_momenta(std::vector<dlv_t> p_production_list) {
+        dlv_t _p_tau_p = p_production_list[2];
+        dlv_t _p_tau_m = p_production_list[3];
+        A = 2.0 * (km.Dot(_p_tau_m) * (kp.Dot(_p_tau_m))) - _p_tau_m.Dot(_p_tau_m) * km.Dot(kp);
+        A += 2.0 * (km.Dot(_p_tau_p) * (kp.Dot(_p_tau_p))) - _p_tau_p.Dot(_p_tau_p) * km.Dot(kp);
+        B = 2.0 * (km.Dot(_p_tau_m) * kp.Dot(_p_tau_p) + km.Dot(_p_tau_p) * kp.Dot(_p_tau_m) -
+                   km.Dot(kp) * _p_tau_m.Dot(_p_tau_p));
+        C = 2.0 * epsilon(km, kp, _p_tau_m, _p_tau_p);
+    }
+
+    dlv_t km;
+    dlv_t kp;
+    double A, B, C;
 };
 
 };  // namespace tauamp

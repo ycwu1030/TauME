@@ -120,6 +120,33 @@ cd_t epsilon(const clv_t &a, const clv_t &b, const clv_t &c, const clv_t &d) {
     res += a.z() * b.y() * c.x() * d.t();      // * 3 2 1 0 +
     return res;
 }
+double epsilon(const dlv_t &a, const dlv_t &b, const dlv_t &c, const dlv_t &d) {
+    double res = a.t() * b.x() * c.y() * d.z();  // * 0 1 2 3 +
+    res -= a.t() * b.x() * c.z() * d.y();        // * 0 1 3 2 -
+    res -= a.t() * b.y() * c.x() * d.z();        // * 0 2 1 3 -
+    res += a.t() * b.y() * c.z() * d.x();        // * 0 2 3 1 +
+    res += a.t() * b.z() * c.x() * d.y();        // * 0 3 1 2 +
+    res -= a.t() * b.z() * c.y() * d.x();        // * 0 3 2 1 -
+    res -= a.x() * b.t() * c.y() * d.z();        // * 1 0 2 3 -
+    res += a.x() * b.t() * c.z() * d.y();        // * 1 0 3 2 +
+    res += a.x() * b.y() * c.t() * d.z();        // * 1 2 0 3 +
+    res -= a.x() * b.y() * c.z() * d.t();        // * 1 2 3 0 -
+    res -= a.x() * b.z() * c.t() * d.y();        // * 1 3 0 2 -
+    res += a.x() * b.z() * c.y() * d.t();        // * 1 3 2 0 +
+    res += a.y() * b.t() * c.x() * d.z();        // * 2 0 1 3 +
+    res -= a.y() * b.t() * c.z() * d.x();        // * 2 0 3 1 -
+    res -= a.y() * b.x() * c.t() * d.z();        // * 2 1 0 3 -
+    res += a.y() * b.x() * c.z() * d.t();        // * 2 1 3 0 +
+    res += a.y() * b.z() * c.t() * d.x();        // * 2 3 0 1 +
+    res -= a.y() * b.z() * c.x() * d.t();        // * 2 3 1 0 -
+    res -= a.z() * b.t() * c.x() * d.y();        // * 3 0 1 2 -
+    res += a.z() * b.t() * c.y() * d.x();        // * 3 0 2 1 +
+    res += a.z() * b.x() * c.t() * d.y();        // * 3 1 0 2 +
+    res -= a.z() * b.x() * c.y() * d.t();        // * 3 1 2 0 -
+    res -= a.z() * b.y() * c.t() * d.x();        // * 3 2 0 1 -
+    res += a.z() * b.y() * c.x() * d.t();        // * 3 2 1 0 +
+    return res;
+}
 
 typedef std::vector<double> vd_t;
 typedef std::vector<std::complex<double>> vcd_t;

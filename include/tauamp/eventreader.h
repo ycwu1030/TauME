@@ -72,6 +72,7 @@ public:
     // * For A1_1prong: pic pi0 pi0
 
     EventReader_t(TChain *c) : m_reader(c), m_p_pion_tau_m(k_N_Pion_TauM), m_p_pion_tau_p(k_N_Pion_TauP) {
+        m_branch_GenTau = m_reader.UseBranch("GenTau");
         m_branch_GenChargedPion = m_reader.UseBranch("GenChargedPion");
         m_branch_GenNeutralPion = m_reader.UseBranch("GenNeutralPion");
         m_branch_GenNeutrino = m_reader.UseBranch("GenNeutrino");
@@ -122,6 +123,7 @@ public:
 
 private:
     ExRootTreeReader m_reader;
+    TClonesArray *m_branch_GenTau;
     TClonesArray *m_branch_GenChargedPion;
     TClonesArray *m_branch_GenNeutralPion;
     TClonesArray *m_branch_GenNeutrino;
@@ -182,6 +184,7 @@ private:
         return true;
     }
 
+    bool m_read_tau() {}
     bool m_read_neutrino(int tau_m_id, int tau_p_id) {
         // * Reading truth neutrinos
         GenParticle *nu1 = (GenParticle *)m_branch_GenNeutrino->At(0);
@@ -401,15 +404,24 @@ bool EventReader_t<Rho, Rho, PARTON>::m_read_event() {
     // ** Find charged pion for each tau, using charge to identify the origin
     int tau_p_id, tau_m_id;
     good = m_read_charged_pion(tau_m_id, tau_p_id);
-    if (!good) return false;
+    if (!good) {
+        std::cout << "Charged Pion Error" << std::endl;
+        return false;
+    }
 
     // ** The neutrinos
     good = m_read_neutrino(tau_m_id, tau_p_id);
-    if (!good) return false;
+    if (!good) {
+        std::cout << "Neutrino Error" << std::endl;
+        return false;
+    }
 
     // ** Neutral Pion, using the mother ID
     int n_neutral_pion = m_branch_GenNeutralPion->GetEntriesFast();
-    if (n_neutral_pion != 2) return false;
+    if (n_neutral_pion != 2) {
+        std::cout << "Neutral Pion Number Error" << std::endl;
+        return false;
+    }
     GenParticle *pi01 = (GenParticle *)m_branch_GenNeutralPion->At(0);
     GenParticle *pi02 = (GenParticle *)m_branch_GenNeutralPion->At(1);
     GenParticle *pi0p;
@@ -423,6 +435,7 @@ bool EventReader_t<Rho, Rho, PARTON>::m_read_event() {
         pi0p = pi02;
         pi0m = pi01;
     } else {
+        std::cout << "Neutral Pion Matching Error" << std::endl;
         return false;
     }
     m_p_pion_tau_m[1].SetPxPyPzE(pi0m->Px, pi0m->Pz, pi0m->Pz, pi0m->E);
@@ -566,6 +579,28 @@ bool EventReader_t<Rho, Rho, DETECTOR>::m_read_event() {
 
     return true;
 }
+
+// class RhoReader_t {
+// public:
+//     RhoReader_t(TChain *c) : m_reader(c) {
+//         m_branch_GenChargedPion = m_reader.UseBranch("GenChargedPion");
+//         m_branch_GenNeutralPion = m_reader.UseBranch("GenNeutralPion");
+//         m_branch_GenNeutrino = m_reader.UseBranch("GenNeutrino");
+//         m_branch_ChargedPion = m_reader.UseBranch("ChargedPion");
+//         m_branch_NeutralPion = m_reader.UseBranch("NeutralPion");
+//         m_branch_BeamParticle = m_reader.UseBranch("BeamParticle");
+//     }
+//     ~RhoReader_t() {}
+
+// private:
+//     ExRootTreeReader m_reader;
+//     TClonesArray *m_branch_GenChargedPion;
+//     TClonesArray *m_branch_GenNeutralPion;
+//     TClonesArray *m_branch_GenNeutrino;
+//     TClonesArray *m_branch_ChargedPion;
+//     TClonesArray *m_branch_NeutralPion;
+//     TClonesArray *m_branch_BeamParticle;
+// };
 
 };  // namespace tauamp
 

@@ -79,26 +79,6 @@ private:
     clv_t _p_pi;
 };
 
-template <bool is_anti = false>
-class TauDecay_rho : public TauDecay_t<is_anti> {
-public:
-    TauDecay_rho() {}
-    ~TauDecay_rho() {}
-
-protected:
-    virtual void _set_momenta(std::vector<dlv_t> p_list) override {
-        TauDecay_t<is_anti>::_p_nu_tau = ToComplex(p_list[0]);
-        _p_pic = ToComplex(p_list[1]);
-        _p_pi0 = ToComplex(p_list[2]);
-        TauDecay_t<is_anti>::_p_tau = TauDecay_t<is_anti>::_p_nu_tau + _p_pi0 + _p_pic;
-        TauDecay_t<is_anti>::_J = (_p_pic - _p_pi0);
-    }
-
-private:
-    clv_t _p_pi0;
-    clv_t _p_pic;
-};
-
 namespace {
 inline double _lam_Kallen(double x, double y, double z) {
     return x * x + y * y + z * z - 2.0 * x * y - 2.0 * y * z - 2.0 * z * x;
@@ -131,6 +111,27 @@ inline cd_t _F_PI(double Q2) {
     return (BW_RHO + BETA * BW_RHOP) / (1.0 + BETA);
 }
 }  // namespace
+template <bool is_anti = false>
+class TauDecay_rho : public TauDecay_t<is_anti> {
+public:
+    TauDecay_rho() {}
+    ~TauDecay_rho() {}
+
+protected:
+    virtual void _set_momenta(std::vector<dlv_t> p_list) override {
+        TauDecay_t<is_anti>::_p_nu_tau = ToComplex(p_list[0]);
+        _p_pic = ToComplex(p_list[1]);
+        _p_pi0 = ToComplex(p_list[2]);
+        TauDecay_t<is_anti>::_p_tau = TauDecay_t<is_anti>::_p_nu_tau + _p_pi0 + _p_pic;
+        dlv_t q = p_list[1] + p_list[2];
+        double Q2 = q.M2();
+        TauDecay_t<is_anti>::_J = (_p_pic - _p_pi0);
+    }
+
+private:
+    clv_t _p_pi0;
+    clv_t _p_pic;
+};
 
 template <bool is_anti = false>
 class TauDecay_a1 : public TauDecay_t<is_anti> {
