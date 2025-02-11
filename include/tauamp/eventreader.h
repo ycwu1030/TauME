@@ -438,7 +438,7 @@ bool EventReader_t<Rho, Rho, PARTON>::m_read_event() {
         std::cout << "Neutral Pion Matching Error" << std::endl;
         return false;
     }
-    m_p_pion_tau_m[1].SetPxPyPzE(pi0m->Px, pi0m->Pz, pi0m->Pz, pi0m->E);
+    m_p_pion_tau_m[1].SetPxPyPzE(pi0m->Px, pi0m->Py, pi0m->Pz, pi0m->E);
     m_p_pion_tau_p[1].SetPxPyPzE(pi0p->Px, pi0p->Py, pi0p->Pz, pi0p->E);
 
     // * Storing all the momenta

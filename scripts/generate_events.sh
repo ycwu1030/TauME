@@ -38,7 +38,7 @@ process_dir=${WORK_dir}/$process
 
 # Set event number
 eventNum=100000
-halfEcm=125
+halfEcm=250
 
 
 cd ${current_dir}
@@ -53,7 +53,6 @@ ${MG5_dir}/bin/mg5_aMC $process.cmd                               >> $process.lo
 echo "Process generated"
 
 
-# Scan the c.m.energy
 for nrun in $(seq 1 1 $multi)
 do
 	rm -rf $process.cmd

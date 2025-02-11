@@ -376,11 +376,18 @@ private:
     void set_production_momenta(std::vector<dlv_t> p_production_list) {
         dlv_t _p_tau_p = p_production_list[2];
         dlv_t _p_tau_m = p_production_list[3];
-        A = 2.0 * (km.Dot(_p_tau_m) * (kp.Dot(_p_tau_m))) - _p_tau_m.Dot(_p_tau_m) * km.Dot(kp);
-        A += 2.0 * (km.Dot(_p_tau_p) * (kp.Dot(_p_tau_p))) - _p_tau_p.Dot(_p_tau_p) * km.Dot(kp);
-        B = 2.0 * (km.Dot(_p_tau_m) * kp.Dot(_p_tau_p) + km.Dot(_p_tau_p) * kp.Dot(_p_tau_m) -
-                   km.Dot(kp) * _p_tau_m.Dot(_p_tau_p));
-        C = 2.0 * epsilon(km, kp, _p_tau_m, _p_tau_p);
+        A = 4.0 * MTAU * MTAU *
+            ((km.Dot(_p_tau_m)) * (kp.Dot(_p_tau_m)) + (kp.Dot(_p_tau_p)) * (km.Dot(_p_tau_p)) +
+             MTAU * MTAU * (km.Dot(kp)));
+        B = 4.0 * MTAU * MTAU *
+            ((km.Dot(_p_tau_m)) * (kp.Dot(_p_tau_p)) + (km.Dot(_p_tau_p)) * (kp.Dot(_p_tau_m)) -
+             (km.Dot(kp)) * (_p_tau_m.Dot(_p_tau_p)));
+        C = -4.0 * MTAU * MTAU * epsilon(km, _p_tau_m, kp, _p_tau_p);
+        // A = 2.0 * (km.Dot(_p_tau_m) * (kp.Dot(_p_tau_m))) - _p_tau_m.Dot(_p_tau_m) * km.Dot(kp);
+        // A += 2.0 * (km.Dot(_p_tau_p) * (kp.Dot(_p_tau_p))) - _p_tau_p.Dot(_p_tau_p) * km.Dot(kp);
+        // B = 2.0 * (km.Dot(_p_tau_m) * kp.Dot(_p_tau_p) + km.Dot(_p_tau_p) * kp.Dot(_p_tau_m) -
+        //            km.Dot(kp) * _p_tau_m.Dot(_p_tau_p));
+        // C = 2.0 * epsilon(km, kp, _p_tau_m, _p_tau_p);
     }
 
     dlv_t km;
