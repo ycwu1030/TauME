@@ -202,6 +202,9 @@ private:
         } else {
             return false;
         }
+        int nup_ID = nup->PID;
+        int num_ID = num->PID;
+        if (nup_ID != -16 || num_ID != 16) return false;
         m_p_nu_tau_m_gen.SetPxPyPzE(num->Px, num->Py, num->Pz, num->E);
         m_p_nu_tau_p_gen.SetPxPyPzE(nup->Px, nup->Py, nup->Pz, nup->E);
 

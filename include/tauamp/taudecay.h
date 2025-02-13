@@ -125,7 +125,7 @@ protected:
         TauDecay_t<is_anti>::_p_tau = TauDecay_t<is_anti>::_p_nu_tau + _p_pi0 + _p_pic;
         dlv_t q = p_list[1] + p_list[2];
         double Q2 = q.M2();
-        TauDecay_t<is_anti>::_J = (_p_pic - _p_pi0);
+        TauDecay_t<is_anti>::_J = _F_PI(Q2) * (_p_pic - _p_pi0);
     }
 
 private:
