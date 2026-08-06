@@ -8,7 +8,7 @@ datadir=${output_dir}/${decay_mode}
 mkdir -p ${datadir}
 multi=10
 
-MG5_dir="/Users/ycwu/Workingspace/MC-Generators/MG5_aMC_v3_5_4"
+MG5_dir="/Users/ycwu/Workingspace/MC-Generators/MG5_aMC_current"
 delphes_dir="/Users/ycwu/Workingspace/Misc/delphes/build/readers"
 WORK_dir="/tmp/MG5PROC"
 DATA_TMP_dir="/tmp/MG5DATA"

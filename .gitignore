@@ -3,3 +3,4 @@ test/
 *.root
 py.py
 ME5_DEBUG
+*.pyc
