@@ -41,6 +41,11 @@ inline FourMomentum operator+(const FourMomentum& left, const FourMomentum& righ
             left.energy() + right.energy()};
 }
 
+inline FourMomentum operator-(const FourMomentum& left, const FourMomentum& right) {
+    return {left.px() - right.px(), left.py() - right.py(), left.pz() - right.pz(),
+            left.energy() - right.energy()};
+}
+
 }  // namespace tauamp::tautau
 
 #endif  // TAUAMP_TAUTAU_FOUR_MOMENTUM_H_
