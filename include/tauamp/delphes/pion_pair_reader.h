@@ -94,6 +94,8 @@ public:
     PionPairDelphesReader(PionPairDelphesReader&&) = delete;
     PionPairDelphesReader& operator=(PionPairDelphesReader&&) = delete;
 
+    Long64_t entry_count() const { return tree_->GetEntries(); }
+
     PionPairDelphesEvent read(Long64_t entry) const {
         if (entry < 0 || entry >= tree_->GetEntries()) throw std::out_of_range("Delphes entry is outside tree range");
         if (tree_->GetEntry(entry) < 0) throw std::runtime_error("cannot read Delphes tree entry");

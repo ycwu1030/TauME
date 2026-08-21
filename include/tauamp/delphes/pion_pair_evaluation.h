@@ -14,6 +14,7 @@ struct PionPairDelphesEvaluation {
     TauPairDecayClassification classification;
     TauMomentumProvenance tau_momentum_provenance;
     std::optional<tautau::PionPairVisibleEventEvaluation> evaluation;
+    std::optional<PionPairLabObservation> observation{};
 };
 
 class PionPairDelphesEventEvaluator {
@@ -22,13 +23,14 @@ public:
 
     PionPairDelphesEvaluation evaluate(const PionPairDelphesEvent& event) const {
         if (event.classification != TauPairDecayClassification::supported_pion_pair)
-            return {event.classification, event.tau_momentum_provenance, std::nullopt};
+            return {event.classification, event.tau_momentum_provenance, std::nullopt, std::nullopt};
         if (!event.observation.has_value())
             throw std::invalid_argument("supported pion-pair event lacks a lab-frame observation");
         const PionPairLabObservation& observation = *event.observation;
         return {event.classification, event.tau_momentum_provenance,
                 evaluator_.evaluate(observation.beams, observation.pion_minus_lab, observation.pion_plus_lab,
-                                    observation.tau_mass)};
+                                    observation.tau_mass),
+                event.observation};
     }
 
 private:
