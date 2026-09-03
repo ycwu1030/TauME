@@ -1,11 +1,13 @@
 #include <cassert>
 #include <cmath>
 #include <cstdio>
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
 
 #include <TFile.h>
+#include <TKey.h>
 #include <TObjString.h>
 #include <TTree.h>
 
@@ -15,6 +17,16 @@ namespace {
 constexpr double kTolerance = 5e-6;
 
 bool close(double left, double right) { return std::abs(left - right) < kTolerance; }
+
+int key_cycles(TFile& file, const char* name) {
+    int count = 0;
+    TIter next(file.GetListOfKeys());
+    while (auto* object = next()) {
+        auto* key = dynamic_cast<TKey*>(object);
+        if (key && std::string(key->GetName()) == name) ++count;
+    }
+    return count;
+}
 }  // namespace
 
 int main(int argc, char* argv[]) {
@@ -70,6 +82,9 @@ int main(int argc, char* argv[]) {
     assert(events != nullptr);
     assert(hypotheses != nullptr);
     assert(events->GetEntries() == 2);
+    assert(key_cycles(*output, "TauAmpPionPairMetadata") == 1);
+    assert(key_cycles(*output, "Events") == 1);
+    assert(key_cycles(*output, "Hypotheses") == 1);
     const Long64_t expected_hypothesis_count = static_cast<Long64_t>(raw_record->evaluation->entries().size());
     assert(hypotheses->GetEntries() == expected_hypothesis_count);
 

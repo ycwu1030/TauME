@@ -157,7 +157,6 @@ public:
         manifest.Write("TauAmpPionPairMetadata");
         events_->Write();
         hypotheses_->Write();
-        file_->Write();
         file_->Close();
         finalized_ = true;
     }
