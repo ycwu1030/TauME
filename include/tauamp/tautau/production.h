@@ -361,6 +361,51 @@ public:
         return result;
     }
 
+    SpinDensityPolynomialComponents polynomial_components(const TauPairKinematicPoint& kinematics) const {
+        const auto model = detail::bosons(parameters_);
+        const SpinDensityComponents linear = components(kinematics);
+        SpinDensityPolynomialComponents result;
+        result.sm = linear.sm;
+        result.f2_real = linear.f2_real;
+        result.f2_imaginary = linear.f2_imaginary;
+        result.f3_real = linear.f3_real;
+        result.f3_imaginary = linear.f3_imaginary;
+
+        const std::array<detail::TauVertexSector, 4> sectors{{detail::TauVertexSector::f2,
+                                                                detail::TauVertexSector::f2,
+                                                                detail::TauVertexSector::f3,
+                                                                detail::TauVertexSector::f3}};
+        const std::array<detail::Complex, 4> factors{{detail::Complex{1.0, 0.0}, detail::Complex{0.0, 1.0},
+                                                       detail::Complex{1.0, 0.0}, detail::Complex{0.0, 1.0}}};
+        const std::array<PauliBasisMatrix*, 10> terms{{
+            &result.f2_real_f2_real, &result.f2_real_f2_imaginary, &result.f2_real_f3_real,
+            &result.f2_real_f3_imaginary, &result.f2_imaginary_f2_imaginary, &result.f2_imaginary_f3_real,
+            &result.f2_imaginary_f3_imaginary, &result.f3_real_f3_real, &result.f3_real_f3_imaginary,
+            &result.f3_imaginary_f3_imaginary,
+        }};
+        const std::array<std::array<std::size_t, 2>, 10> indices{{
+            {{0, 0}}, {{0, 1}}, {{0, 2}}, {{0, 3}}, {{1, 1}},
+            {{1, 2}}, {{1, 3}}, {{2, 2}}, {{2, 3}}, {{3, 3}},
+        }};
+        for (std::size_t term = 0; term < terms.size(); ++term) {
+            const std::size_t left_direction = indices[term][0];
+            const std::size_t right_direction = indices[term][1];
+            detail::ComplexPauliBasisMatrix total;
+            const auto add = [&](std::size_t left, std::size_t right) {
+                const detail::ComplexPauliBasisMatrix contribution = detail::coefficients(
+                    kinematics, detail::pair_contract(kinematics, model[0], model[0], true, true,
+                                                       sectors[left], sectors[right], factors[left], factors[right]));
+                for (std::size_t row = 0; row < 4; ++row)
+                    for (std::size_t column = 0; column < 4; ++column)
+                        total(row, column) += contribution(row, column);
+            };
+            add(left_direction, right_direction);
+            if (left_direction != right_direction) add(right_direction, left_direction);
+            *terms[term] = detail::real_coefficients(total);
+        }
+        return result;
+    }
+
 private:
     ElectroweakParameters parameters_;
 };

@@ -84,6 +84,7 @@ int main() {
     const ElectroweakParameters parameters{0.313, 0.48, 91.1876, 2.4952};
     const ElectronPositronToTauPair production(parameters);
     const auto components = production.components(symmetric);
+    const auto polynomial = production.polynomial_components(symmetric);
     const auto asymmetric_components = production.components(asymmetric);
 
     assert_matrix_close(components.sm, kSm);
@@ -92,6 +93,34 @@ int main() {
     assert_matrix_close(components.f3_real, kF3Real);
     assert_matrix_close(components.f3_imaginary, kF3Imaginary);
     assert_matrix_close(components.recompose({}), kSm);
+    assert_matrix_close(polynomial.recompose_linear({}), kSm);
+    assert_matrix_close(polynomial.sm, kSm);
+    assert(!close(polynomial.f2_real_f2_real(0, 0), 0.0));
+    bool has_f2_f3_cross_term = false;
+    for (std::size_t row = 0; row < 4; ++row)
+        for (std::size_t column = 0; column < 4; ++column)
+            has_f2_f3_cross_term = has_f2_f3_cross_term || !close(polynomial.f2_real_f3_real(row, column), 0.0);
+    assert(has_f2_f3_cross_term);
+    assert(close(polynomial.f2_real_f2_imaginary(0, 0), 0.0));
+    assert(close(polynomial.f3_real_f3_imaginary(0, 0), 0.0));
+
+    const tauamp::tautau::PhotonDipoleFormFactors finite_form_factors{{0.002, -0.004}, {0.003, -0.001}};
+    const auto full = polynomial.recompose_full(finite_form_factors);
+    const auto reversed = polynomial.recompose_full(
+        tauamp::tautau::PhotonDipoleFormFactors{{-0.002, 0.004}, {-0.003, 0.001}});
+    const auto linear = polynomial.recompose_linear(finite_form_factors);
+    const auto reversed_linear = polynomial.recompose_linear(
+        tauamp::tautau::PhotonDipoleFormFactors{{-0.002, 0.004}, {-0.003, 0.001}});
+    bool observed_quadratic_effect = false;
+    for (std::size_t row = 0; row < 4; ++row) {
+        for (std::size_t column = 0; column < 4; ++column) {
+            assert(close(full(row, column) + reversed(row, column) - linear(row, column) -
+                             reversed_linear(row, column),
+                         2.0 * (full(row, column) - linear(row, column))));
+            if (!close(full(row, column), linear(row, column))) observed_quadratic_effect = true;
+        }
+    }
+    assert(observed_quadratic_effect);
 
     for (std::size_t row = 0; row < 4; ++row) {
         for (std::size_t column = 0; column < 4; ++column) {
