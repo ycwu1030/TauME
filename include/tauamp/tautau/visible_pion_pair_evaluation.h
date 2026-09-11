@@ -67,7 +67,9 @@ private:
 
 class PionPairVisibleEventEvaluator {
 public:
-    explicit PionPairVisibleEventEvaluator(ElectroweakParameters parameters) : matrix_element_(parameters) {}
+    explicit PionPairVisibleEventEvaluator(ElectroweakParameters parameters,
+                                           ProductionBosons boson_selection = ProductionBosons::photon_and_z)
+        : matrix_element_(parameters, boson_selection) {}
 
     PionPairVisibleEventEvaluation evaluate(const BeamState& beams, const FourMomentum& pion_minus_lab,
                                             const FourMomentum& pion_plus_lab, double tau_mass) const {

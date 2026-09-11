@@ -38,12 +38,14 @@ int main(int argc, char* argv[]) {
                                                                tauamp::delphes::PionObjectSource::generated};
     const tauamp::tautau::ElectroweakParameters electroweak_parameters{0.313, 0.48, 91.1876, 2.4952};
     const tauamp::delphes::PionPairDelphesReader reader(argv[1], reader_config);
-    const tauamp::delphes::PionPairDelphesEventEvaluator evaluator(electroweak_parameters);
+    const tauamp::delphes::PionPairDelphesEventEvaluator evaluator(
+        electroweak_parameters, tauamp::tautau::ProductionBosons::photon_only);
     const tauamp::delphes::PionPairDelphesEventLoop loop(reader, evaluator);
     const tauamp::delphes::PionPairRootOutputMetadata metadata{
         "a34d645cb9df4dc9a9527263277ebf3b14eb86aa9e4d74feab60744d28e84daa", "Delphes",
         tauamp::delphes::PionObjectSource::generated, reader_config.electron_polarization,
-        reader_config.positron_polarization, reader_config.tau_mass, electroweak_parameters, "writer-test-revision"};
+        reader_config.positron_polarization, reader_config.tau_mass, electroweak_parameters, "writer-test-revision",
+        tauamp::tautau::ProductionBosons::photon_only};
     tauamp::delphes::PionPairRootWriter writer(output_path, metadata);
 
     std::optional<tauamp::delphes::PionPairEventLoopRecord> raw_record;
@@ -71,6 +73,8 @@ int main(int argc, char* argv[]) {
     assert(manifest != nullptr);
     const std::string manifest_text = manifest->GetString().Data();
     assert(manifest_text.find("schema_version=2\n") != std::string::npos);
+    assert(manifest_text.find("model_interpretation=linear_plus_quadratic\n") != std::string::npos);
+    assert(manifest_text.find("production_bosons=photon_only\n") != std::string::npos);
     assert(manifest_text.find("input_file_sha256=a34d645cb9df4dc9a9527263277ebf3b14eb86aa9e4d74feab60744d28e84daa\n") !=
            std::string::npos);
     assert(manifest_text.find("object_source=generated\n") != std::string::npos);

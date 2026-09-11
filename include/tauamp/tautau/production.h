@@ -19,6 +19,8 @@ struct ElectroweakParameters {
     double z_width;
 };
 
+enum class ProductionBosons { photon_and_z, photon_only };
+
 namespace detail {
 
 using Complex = std::complex<double>;
@@ -319,7 +321,7 @@ inline PauliBasisMatrix real_coefficients(const ComplexPauliBasisMatrix& complex
 }
 
 inline PauliBasisMatrix sum_coefficients(const TauPairKinematicPoint& kinematics, const std::array<BosonCouplings, 2>& model,
-                                         TauVertexSector sector, Complex form_factor) {
+                                         TauVertexSector sector, Complex form_factor, ProductionBosons boson_selection) {
     ComplexPauliBasisMatrix total;
     const auto add = [&](std::size_t left, std::size_t right, TauVertexSector left_sector, TauVertexSector right_sector,
                          Complex left_factor, Complex right_factor) {
@@ -331,15 +333,18 @@ inline PauliBasisMatrix sum_coefficients(const TauPairKinematicPoint& kinematics
     };
 
     if (sector == TauVertexSector::standard_model) {
-        for (std::size_t left = 0; left < 2; ++left) {
-            for (std::size_t right = 0; right < 2; ++right)
+        const std::size_t boson_count = boson_selection == ProductionBosons::photon_only ? 1U : 2U;
+        for (std::size_t left = 0; left < boson_count; ++left) {
+            for (std::size_t right = 0; right < boson_count; ++right)
                 add(left, right, TauVertexSector::standard_model, TauVertexSector::standard_model, {}, {});
         }
     } else {
         add(0, 0, sector, TauVertexSector::standard_model, form_factor, {});
         add(0, 0, TauVertexSector::standard_model, sector, {}, form_factor);
-        add(0, 1, sector, TauVertexSector::standard_model, form_factor, {});
-        add(1, 0, TauVertexSector::standard_model, sector, {}, form_factor);
+        if (boson_selection == ProductionBosons::photon_and_z) {
+            add(0, 1, sector, TauVertexSector::standard_model, form_factor, {});
+            add(1, 0, TauVertexSector::standard_model, sector, {}, form_factor);
+        }
     }
     return real_coefficients(total);
 }
@@ -348,16 +353,18 @@ inline PauliBasisMatrix sum_coefficients(const TauPairKinematicPoint& kinematics
 
 class ElectronPositronToTauPair {
 public:
-    explicit ElectronPositronToTauPair(ElectroweakParameters parameters) : parameters_(parameters) {}
+    explicit ElectronPositronToTauPair(ElectroweakParameters parameters,
+                                       ProductionBosons boson_selection = ProductionBosons::photon_and_z)
+        : parameters_(parameters), boson_selection_(boson_selection) {}
 
     SpinDensityComponents components(const TauPairKinematicPoint& kinematics) const {
         const auto model = detail::bosons(parameters_);
         SpinDensityComponents result;
-        result.sm = detail::sum_coefficients(kinematics, model, detail::TauVertexSector::standard_model, {});
-        result.f2_real = detail::sum_coefficients(kinematics, model, detail::TauVertexSector::f2, {1.0, 0.0});
-        result.f2_imaginary = detail::sum_coefficients(kinematics, model, detail::TauVertexSector::f2, {0.0, 1.0});
-        result.f3_real = detail::sum_coefficients(kinematics, model, detail::TauVertexSector::f3, {1.0, 0.0});
-        result.f3_imaginary = detail::sum_coefficients(kinematics, model, detail::TauVertexSector::f3, {0.0, 1.0});
+        result.sm = detail::sum_coefficients(kinematics, model, detail::TauVertexSector::standard_model, {}, boson_selection_);
+        result.f2_real = detail::sum_coefficients(kinematics, model, detail::TauVertexSector::f2, {1.0, 0.0}, boson_selection_);
+        result.f2_imaginary = detail::sum_coefficients(kinematics, model, detail::TauVertexSector::f2, {0.0, 1.0}, boson_selection_);
+        result.f3_real = detail::sum_coefficients(kinematics, model, detail::TauVertexSector::f3, {1.0, 0.0}, boson_selection_);
+        result.f3_imaginary = detail::sum_coefficients(kinematics, model, detail::TauVertexSector::f3, {0.0, 1.0}, boson_selection_);
         return result;
     }
 
@@ -408,6 +415,7 @@ public:
 
 private:
     ElectroweakParameters parameters_;
+    ProductionBosons boson_selection_;
 };
 
 }  // namespace tauamp::tautau

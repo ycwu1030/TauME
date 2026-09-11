@@ -28,6 +28,7 @@ struct PionPairRootOutputMetadata {
     double tau_mass;
     tautau::ElectroweakParameters electroweak_parameters;
     std::string implementation_revision;
+    tautau::ProductionBosons production_bosons{tautau::ProductionBosons::photon_and_z};
 };
 
 namespace detail {
@@ -46,6 +47,16 @@ inline const char* object_source_name(PionObjectSource source) {
             return "reconstructed";
     }
     throw std::invalid_argument("pion object source is invalid");
+}
+
+inline const char* production_bosons_name(tautau::ProductionBosons selection) {
+    switch (selection) {
+        case tautau::ProductionBosons::photon_and_z:
+            return "photon_and_z";
+        case tautau::ProductionBosons::photon_only:
+            return "photon_only";
+    }
+    throw std::invalid_argument("production boson selection is invalid");
 }
 
 inline PionPairSelectionStatus selection_status(tautau::HadronicTauPairSolutionStatus status) {
@@ -81,6 +92,8 @@ inline std::string metadata_manifest(const PionPairRootOutputMetadata& metadata)
     std::ostringstream manifest;
     manifest << std::setprecision(17);
     manifest << "schema_version=2\n";
+    manifest << "model_interpretation=linear_plus_quadratic\n";
+    manifest << "production_bosons=" << production_bosons_name(metadata.production_bosons) << '\n';
     manifest << "input_file_sha256=" << metadata.input_file_sha256 << '\n';
     manifest << "input_tree_name=" << metadata.input_tree_name << '\n';
     manifest << "object_source=" << object_source_name(metadata.object_source) << '\n';

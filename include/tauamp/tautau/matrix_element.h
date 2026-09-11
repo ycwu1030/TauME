@@ -26,7 +26,9 @@ inline double contract_pion_analysers(const PauliBasisMatrix& matrix, const std:
 
 class PionPairMatrixElement {
 public:
-    explicit PionPairMatrixElement(ElectroweakParameters parameters) : production_(parameters) {}
+    explicit PionPairMatrixElement(ElectroweakParameters parameters,
+                                   ProductionBosons boson_selection = ProductionBosons::photon_and_z)
+        : production_(parameters, boson_selection) {}
 
     LinearComponents components(const PionPairKinematicHypothesis& hypothesis) const {
         return components(hypothesis.point, hypothesis.pion_minus_lab, hypothesis.pion_plus_lab);

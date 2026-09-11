@@ -19,6 +19,7 @@ struct Configuration {
     Long64_t begin;
     Long64_t end;
     tauamp::delphes::PionObjectSource pion_source;
+    tauamp::tautau::ProductionBosons production_bosons;
     double electron_polarization;
     double positron_polarization;
     double tau_mass;
@@ -66,6 +67,12 @@ tauamp::delphes::PionObjectSource parse_pion_source(const std::string& value) {
     throw std::invalid_argument("--pion-source must be generated or reconstructed");
 }
 
+tauamp::tautau::ProductionBosons parse_production_bosons(const std::string& value) {
+    if (value == "photon_only") return tauamp::tautau::ProductionBosons::photon_only;
+    if (value == "photon_and_z") return tauamp::tautau::ProductionBosons::photon_and_z;
+    throw std::invalid_argument("--production-bosons must be photon_only or photon_and_z");
+}
+
 void validate_sha256(const std::string& value) {
     if (value.size() != 64U)
         throw std::invalid_argument("--input-sha256 must contain exactly 64 hexadecimal characters");
@@ -88,6 +95,7 @@ Configuration parse_configuration(int argc, char* argv[]) {
 
     constexpr const char* required_options[] = {
         "--input",          "--output",              "--begin",          "--end",     "--pion-source",
+        "--production-bosons",
         "--electron-polarization", "--positron-polarization", "--tau-mass",       "--electric-charge",
         "--weak-mixing-sine",      "--z-mass",                 "--z-width",       "--input-sha256",
         "--implementation-revision"};
@@ -100,6 +108,7 @@ Configuration parse_configuration(int argc, char* argv[]) {
         parse_entry(required_value(values, "--begin"), "--begin"),
         parse_entry(required_value(values, "--end"), "--end"),
         parse_pion_source(required_value(values, "--pion-source")),
+        parse_production_bosons(required_value(values, "--production-bosons")),
         parse_finite_number(required_value(values, "--electron-polarization"), "--electron-polarization"),
         parse_finite_number(required_value(values, "--positron-polarization"), "--positron-polarization"),
         parse_finite_number(required_value(values, "--tau-mass"), "--tau-mass"),
@@ -139,7 +148,8 @@ int main(int argc, char* argv[]) {
         const tauamp::delphes::PionPairDelphesReader reader(configuration.input_path, reader_configuration);
         validate_range(configuration, reader.entry_count());
 
-        const tauamp::delphes::PionPairDelphesEventEvaluator evaluator(configuration.electroweak_parameters);
+        const tauamp::delphes::PionPairDelphesEventEvaluator evaluator(
+            configuration.electroweak_parameters, configuration.production_bosons);
         const tauamp::delphes::PionPairDelphesEventLoop loop(reader, evaluator);
         const tauamp::delphes::PionPairRootOutputMetadata metadata{
             configuration.input_sha256,
@@ -149,7 +159,8 @@ int main(int argc, char* argv[]) {
             configuration.positron_polarization,
             configuration.tau_mass,
             configuration.electroweak_parameters,
-            configuration.implementation_revision};
+            configuration.implementation_revision,
+            configuration.production_bosons};
         tauamp::delphes::PionPairRootWriter writer(configuration.output_path, metadata);
         const tauamp::delphes::PionPairEventLoopSummary summary = loop.for_each(
             configuration.begin, configuration.end,

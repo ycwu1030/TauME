@@ -144,4 +144,26 @@ int main() {
     const TauPairKinematicPoint unpolarized(
         unpolarized_beams, symmetric.pair_cm().tau_minus, symmetric.pair_cm().tau_plus, mass);
     assert_matrix_close(production.components(unpolarized).sm, kUnpolarizedSm);
+
+    constexpr double ufo_energy = 2.13;
+    constexpr double ufo_mass = 1.777;
+    const double ufo_momentum = std::sqrt(ufo_energy * ufo_energy - ufo_mass * ufo_mass);
+    const BeamState ufo_beams(FourMomentum(0.0, 0.0, ufo_energy, ufo_energy),
+                              FourMomentum(0.0, 0.0, -ufo_energy, ufo_energy), 0.0, 0.0);
+    const ElectroweakParameters ufo_parameters{std::sqrt(4.0 * M_PI / 127.9), 0.48, 91.1876, 2.4952};
+    const ElectronPositronToTauPair photon_only(ufo_parameters, tauamp::tautau::ProductionBosons::photon_only);
+    const auto ufo_ratio = [&](double cosine, const tauamp::tautau::PhotonDipoleFormFactors& form_factors) {
+        const double sine = std::sqrt(1.0 - cosine * cosine);
+        const TauPairKinematicPoint point(
+            ufo_beams, FourMomentum(ufo_momentum * sine, 0.0, ufo_momentum * cosine, ufo_energy),
+            FourMomentum(-ufo_momentum * sine, 0.0, -ufo_momentum * cosine, ufo_energy), ufo_mass);
+        const auto value = photon_only.polynomial_components(point);
+        return value.recompose_full(form_factors)(0, 0) / value.sm(0, 0);
+    };
+    assert(close(ufo_ratio(0.0, {{0.020, 0.0}, {0.0, 0.0}}), 1.0477442298146342));
+    assert(close(ufo_ratio(0.0, {{0.0, -0.015}, {0.0, 0.0}}), 1.0003232710913446));
+    assert(close(ufo_ratio(0.0, {{0.0, 0.0}, {0.010, 0.0}}), 1.0000257522264668));
+    assert(close(ufo_ratio(0.0, {{0.0, 0.0}, {0.0, -0.025}}), 1.0001609514154184));
+    assert(close(ufo_ratio(-0.8, {{0.012, -0.008}, {0.017, 0.009}}), 1.025657364078674));
+    assert(close(ufo_ratio(0.8, {{-0.012, 0.008}, {-0.017, -0.009}}), 0.9748788581135721));
 }

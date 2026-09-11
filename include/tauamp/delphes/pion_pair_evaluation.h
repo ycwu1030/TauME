@@ -19,7 +19,10 @@ struct PionPairDelphesEvaluation {
 
 class PionPairDelphesEventEvaluator {
 public:
-    explicit PionPairDelphesEventEvaluator(tautau::ElectroweakParameters parameters) : evaluator_(parameters) {}
+    explicit PionPairDelphesEventEvaluator(
+        tautau::ElectroweakParameters parameters,
+        tautau::ProductionBosons boson_selection = tautau::ProductionBosons::photon_and_z)
+        : evaluator_(parameters, boson_selection) {}
 
     PionPairDelphesEvaluation evaluate(const PionPairDelphesEvent& event) const {
         if (event.classification != TauPairDecayClassification::supported_pion_pair)
