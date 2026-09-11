@@ -80,7 +80,7 @@ inline void validate_metadata(const PionPairRootOutputMetadata& metadata) {
 inline std::string metadata_manifest(const PionPairRootOutputMetadata& metadata) {
     std::ostringstream manifest;
     manifest << std::setprecision(17);
-    manifest << "schema_version=1\n";
+    manifest << "schema_version=2\n";
     manifest << "input_file_sha256=" << metadata.input_file_sha256 << '\n';
     manifest << "input_tree_name=" << metadata.input_tree_name << '\n';
     manifest << "object_source=" << object_source_name(metadata.object_source) << '\n';
@@ -94,7 +94,8 @@ inline std::string metadata_manifest(const PionPairRootOutputMetadata& metadata)
     manifest << "momentum_frame=lab\n";
     manifest << "beam_ordering=electron,positron\n";
     manifest << "pion_ordering=pion_minus,pion_plus\n";
-    manifest << "component_ordering=sm,f2_real,f2_imaginary,f3_real,f3_imaginary\n";
+    manifest << "component_ordering=sm,f2_real,f2_imaginary,f3_real,f3_imaginary,f2_real_f2_real,f2_real_f2_imaginary,f2_real_f3_real,f2_real_f3_imaginary,f2_imaginary_f2_imaginary,f2_imaginary_f3_real,f2_imaginary_f3_imaginary,f3_real_f3_real,f3_real_f3_imaginary,f3_imaginary_f3_imaginary\n";
+    manifest << "quadratic_cross_term_convention=stored_coefficient_includes_both_amplitude_orderings\n";
     manifest << "branch_weight_rule=equal_kinematic_weight\n";
     manifest << "truth_tau_input_used=false\n";
     manifest << "classification_encoding=supported_pion_pair:0,recognized_unsupported:1,ambiguous:2,unclassified:3\n";
@@ -196,6 +197,16 @@ private:
         hypotheses_->Branch("component_f2_imaginary", &component_f2_imaginary_);
         hypotheses_->Branch("component_f3_real", &component_f3_real_);
         hypotheses_->Branch("component_f3_imaginary", &component_f3_imaginary_);
+        hypotheses_->Branch("component_f2_real_f2_real", &component_f2_real_f2_real_);
+        hypotheses_->Branch("component_f2_real_f2_imaginary", &component_f2_real_f2_imaginary_);
+        hypotheses_->Branch("component_f2_real_f3_real", &component_f2_real_f3_real_);
+        hypotheses_->Branch("component_f2_real_f3_imaginary", &component_f2_real_f3_imaginary_);
+        hypotheses_->Branch("component_f2_imaginary_f2_imaginary", &component_f2_imaginary_f2_imaginary_);
+        hypotheses_->Branch("component_f2_imaginary_f3_real", &component_f2_imaginary_f3_real_);
+        hypotheses_->Branch("component_f2_imaginary_f3_imaginary", &component_f2_imaginary_f3_imaginary_);
+        hypotheses_->Branch("component_f3_real_f3_real", &component_f3_real_f3_real_);
+        hypotheses_->Branch("component_f3_real_f3_imaginary", &component_f3_real_f3_imaginary_);
+        hypotheses_->Branch("component_f3_imaginary_f3_imaginary", &component_f3_imaginary_f3_imaginary_);
     }
 
     static Int_t validate_record(const PionPairEventLoopRecord& record) {
@@ -257,6 +268,16 @@ private:
         component_f2_imaginary_ = entry.components.f2_imaginary;
         component_f3_real_ = entry.components.f3_real;
         component_f3_imaginary_ = entry.components.f3_imaginary;
+        component_f2_real_f2_real_ = entry.polynomial.f2_real_f2_real;
+        component_f2_real_f2_imaginary_ = entry.polynomial.f2_real_f2_imaginary;
+        component_f2_real_f3_real_ = entry.polynomial.f2_real_f3_real;
+        component_f2_real_f3_imaginary_ = entry.polynomial.f2_real_f3_imaginary;
+        component_f2_imaginary_f2_imaginary_ = entry.polynomial.f2_imaginary_f2_imaginary;
+        component_f2_imaginary_f3_real_ = entry.polynomial.f2_imaginary_f3_real;
+        component_f2_imaginary_f3_imaginary_ = entry.polynomial.f2_imaginary_f3_imaginary;
+        component_f3_real_f3_real_ = entry.polynomial.f3_real_f3_real;
+        component_f3_real_f3_imaginary_ = entry.polynomial.f3_real_f3_imaginary;
+        component_f3_imaginary_f3_imaginary_ = entry.polynomial.f3_imaginary_f3_imaginary;
     }
 
     PionPairRootOutputMetadata metadata_;
@@ -298,6 +319,16 @@ private:
     Double_t component_f2_imaginary_{};
     Double_t component_f3_real_{};
     Double_t component_f3_imaginary_{};
+    Double_t component_f2_real_f2_real_{};
+    Double_t component_f2_real_f2_imaginary_{};
+    Double_t component_f2_real_f3_real_{};
+    Double_t component_f2_real_f3_imaginary_{};
+    Double_t component_f2_imaginary_f2_imaginary_{};
+    Double_t component_f2_imaginary_f3_real_{};
+    Double_t component_f2_imaginary_f3_imaginary_{};
+    Double_t component_f3_real_f3_real_{};
+    Double_t component_f3_real_f3_imaginary_{};
+    Double_t component_f3_imaginary_f3_imaginary_{};
 };
 
 }  // namespace tauamp::delphes

@@ -70,11 +70,15 @@ int main(int argc, char* argv[]) {
     const auto* manifest = dynamic_cast<TObjString*>(output->Get("TauAmpPionPairMetadata"));
     assert(manifest != nullptr);
     const std::string manifest_text = manifest->GetString().Data();
-    assert(manifest_text.find("schema_version=1\n") != std::string::npos);
+    assert(manifest_text.find("schema_version=2\n") != std::string::npos);
     assert(manifest_text.find("input_file_sha256=a34d645cb9df4dc9a9527263277ebf3b14eb86aa9e4d74feab60744d28e84daa\n") !=
            std::string::npos);
     assert(manifest_text.find("object_source=generated\n") != std::string::npos);
     assert(manifest_text.find("truth_tau_input_used=false\n") != std::string::npos);
+    assert(manifest_text.find("quadratic_cross_term_convention=stored_coefficient_includes_both_amplitude_orderings\n") !=
+           std::string::npos);
+    assert(manifest_text.find("component_ordering=sm,f2_real,f2_imaginary,f3_real,f3_imaginary,f2_real_f2_real,f2_real_f2_imaginary,f2_real_f3_real,f2_real_f3_imaginary,f2_imaginary_f2_imaginary,f2_imaginary_f3_real,f2_imaginary_f3_imaginary,f3_real_f3_real,f3_real_f3_imaginary,f3_imaginary_f3_imaginary\n") !=
+           std::string::npos);
     assert(manifest_text.find("implementation_revision=writer-test-revision\n") != std::string::npos);
 
     auto* events = dynamic_cast<TTree*>(output->Get("Events"));
@@ -128,11 +132,13 @@ int main(int argc, char* argv[]) {
         Double_t kinematic_weight = 0.0;
         Double_t component_sm = 0.0;
         Double_t component_f2_real = 0.0;
+        Double_t component_f2_real_f2_real = 0.0;
         hypotheses->SetBranchAddress("source_entry", &source_entry);
         hypotheses->SetBranchAddress("hypothesis_index", &hypothesis_index);
         hypotheses->SetBranchAddress("kinematic_weight", &kinematic_weight);
         hypotheses->SetBranchAddress("component_sm", &component_sm);
         hypotheses->SetBranchAddress("component_f2_real", &component_f2_real);
+        hypotheses->SetBranchAddress("component_f2_real_f2_real", &component_f2_real_f2_real);
         hypotheses->GetEntry(0);
         const auto& expected = raw_record->evaluation->entries().front();
         assert(source_entry == 0);
@@ -140,5 +146,6 @@ int main(int argc, char* argv[]) {
         assert(close(kinematic_weight, expected.weight));
         assert(close(component_sm, expected.components.sm));
         assert(close(component_f2_real, expected.components.f2_real));
+        assert(close(component_f2_real_f2_real, expected.polynomial.f2_real_f2_real));
     }
 }
