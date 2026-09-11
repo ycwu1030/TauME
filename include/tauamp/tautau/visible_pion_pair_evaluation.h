@@ -17,6 +17,7 @@ enum class KinematicBranchCombination { average_conditional_observables, ratio_o
 struct PionPairHypothesisComponents {
     PionPairKinematicHypothesis hypothesis;
     LinearComponents components;
+    PolynomialComponents polynomial;
     double weight;
 };
 
@@ -42,6 +43,13 @@ public:
 
     HadronicTauPairSolutionStatus status() const { return status_; }
     const std::vector<PionPairHypothesisComponents>& entries() const { return entries_; }
+
+    PolynomialComponents marginalized_polynomial_components() const {
+        std::vector<WeightedPolynomialComponents> components;
+        components.reserve(entries_.size());
+        for (const auto& entry : entries_) components.push_back({entry.polynomial, entry.weight});
+        return average_polynomial_components(components);
+    }
 
     LinearObservableComponents observable_components(KinematicBranchCombination combination) const {
         std::vector<WeightedLinearComponents> components;
@@ -71,7 +79,8 @@ public:
         for (const auto& solution : solution_set.solutions) {
             const PionPairKinematicHypothesis hypothesis{solution.point, pion_minus_lab, pion_plus_lab,
                                                           KinematicPointOrigin::analytic_branch};
-            entries.push_back({hypothesis, matrix_element_.components(hypothesis), weight});
+            entries.push_back({hypothesis, matrix_element_.components(hypothesis),
+                               matrix_element_.polynomial_components(hypothesis), weight});
         }
         return {solution_set.status, std::move(entries)};
     }

@@ -102,7 +102,16 @@ int main() {
         assert(entry.hypothesis.origin == KinematicPointOrigin::analytic_branch);
         assert(close(entry.weight, 0.5));
         expect_equal(entry.components, direct_matrix_element.components(entry.hypothesis));
+        const auto expected_polynomial = direct_matrix_element.polynomial_components(entry.hypothesis);
+        assert(close(entry.polynomial.sm, expected_polynomial.sm));
+        assert(close(entry.polynomial.f2_real_f2_real, expected_polynomial.f2_real_f2_real));
     }
+    const auto averaged_polynomial = twofold.marginalized_polynomial_components();
+    const auto first_polynomial = direct_matrix_element.polynomial_components(twofold.entries()[0].hypothesis);
+    const auto second_polynomial = direct_matrix_element.polynomial_components(twofold.entries()[1].hypothesis);
+    assert(close(averaged_polynomial.sm, 0.5 * (first_polynomial.sm + second_polynomial.sm)));
+    assert(close(averaged_polynomial.f2_real_f3_real,
+                 0.5 * (first_polynomial.f2_real_f3_real + second_polynomial.f2_real_f3_real)));
     const auto expected_average = tauamp::tautau::average_conditional_observables(weighted_components(twofold));
     const auto expected_ratio = tauamp::tautau::ratio_of_average_components(weighted_components(twofold));
     assert(!close(expected_average.f3_real, expected_ratio.f3_real));

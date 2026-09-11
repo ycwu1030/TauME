@@ -25,11 +25,30 @@ void expect_invalid_argument(Callback callback) {
 
 int main() {
     using tauamp::tautau::LinearComponents;
+    using tauamp::tautau::PolynomialComponents;
+    using tauamp::tautau::WeightedPolynomialComponents;
     using tauamp::tautau::WeightedLinearComponents;
 
     const LinearComponents first{2.0, 4.0, -2.0, 2.0, -6.0};
     const LinearComponents second{8.0, 8.0, 16.0, 0.0, 24.0};
     const std::vector<WeightedLinearComponents> components{{first, 1.0}, {second, 3.0}};
+
+    PolynomialComponents polynomial_first;
+    polynomial_first.sm = 2.0;
+    polynomial_first.f2_real = 4.0;
+    polynomial_first.f2_real_f2_real = 10.0;
+    polynomial_first.f2_real_f3_real = -2.0;
+    PolynomialComponents polynomial_second;
+    polynomial_second.sm = 8.0;
+    polynomial_second.f2_real = 8.0;
+    polynomial_second.f2_real_f2_real = 2.0;
+    polynomial_second.f2_real_f3_real = 6.0;
+    const auto polynomial_average = tauamp::tautau::average_polynomial_components(
+        std::vector<WeightedPolynomialComponents>{{polynomial_first, 1.0}, {polynomial_second, 3.0}});
+    assert(close(polynomial_average.sm, 6.5));
+    assert(close(polynomial_average.f2_real, 7.0));
+    assert(close(polynomial_average.f2_real_f2_real, 4.0));
+    assert(close(polynomial_average.f2_real_f3_real, 4.0));
 
     const auto average_of_ratios = tauamp::tautau::average_conditional_observables(components);
     const auto ratio_after_average = tauamp::tautau::ratio_of_average_components(components);
