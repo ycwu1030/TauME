@@ -69,12 +69,28 @@ int main() {
 
     const PionPairMatrixElement matrix_element(ElectroweakParameters{0.313, 0.48, 91.1876, 2.4952});
     const auto components = matrix_element.components(kinematics, pion_minus_cm, pion_plus_cm);
+    const auto polynomial = matrix_element.polynomial_components(kinematics, pion_minus_cm, pion_plus_cm);
     assert(close(components.sm, 0.020226557273898237));
     assert(close(components.f2_real, 0.05119425075109686));
     assert(close(components.f2_imaginary, -0.0007211197775460229));
     assert(close(components.f3_real, -0.0002487522803563775));
     assert(close(components.f3_imaginary, -0.019025560829261927));
     assert(close(components.recompose(PhotonDipoleFormFactors{}), components.sm));
+    assert(close(polynomial.sm, components.sm));
+    assert(close(polynomial.f2_real, components.f2_real));
+    assert(close(polynomial.f2_imaginary, components.f2_imaginary));
+    assert(close(polynomial.f3_real, components.f3_real));
+    assert(close(polynomial.f3_imaginary, components.f3_imaginary));
+    assert(!close(polynomial.f2_real_f2_real, 0.0));
+    assert(close(polynomial.f2_real_f2_imaginary, 0.0));
+    assert(close(polynomial.f3_real_f3_imaginary, 0.0));
+
+    const PhotonDipoleFormFactors finite_form_factors{{0.002, -0.004}, {0.003, -0.001}};
+    const auto full = polynomial.recompose_full(finite_form_factors);
+    const auto reversed = polynomial.recompose_full(PhotonDipoleFormFactors{{-0.002, 0.004}, {-0.003, 0.001}});
+    const auto linear = polynomial.recompose_linear(finite_form_factors);
+    const auto reversed_linear = polynomial.recompose_linear(PhotonDipoleFormFactors{{-0.002, 0.004}, {-0.003, 0.001}});
+    assert(close(full + reversed - linear - reversed_linear, 2.0 * (full - linear)));
 
     const std::array<double, 3> lab_boost{{0.0, 0.0, std::tanh(0.35)}};
     const BeamState asymmetric_beams(electron_cm.boosted(lab_boost), positron_cm.boosted(lab_boost), 0.37, -0.41);

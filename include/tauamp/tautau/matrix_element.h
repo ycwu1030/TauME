@@ -32,6 +32,10 @@ public:
         return components(hypothesis.point, hypothesis.pion_minus_lab, hypothesis.pion_plus_lab);
     }
 
+    PolynomialComponents polynomial_components(const PionPairKinematicHypothesis& hypothesis) const {
+        return polynomial_components(hypothesis.point, hypothesis.pion_minus_lab, hypothesis.pion_plus_lab);
+    }
+
     LinearComponents components(const TauPairKinematicPoint& kinematics, const FourMomentum& pion_minus_lab,
                                 const FourMomentum& pion_plus_lab) const {
         const auto tau_minus_analyser = tau_minus_pion_analyser(kinematics, pion_minus_lab);
@@ -42,6 +46,30 @@ public:
                 contract_pion_analysers(production_components.f2_imaginary, tau_minus_analyser, tau_plus_analyser),
                 contract_pion_analysers(production_components.f3_real, tau_minus_analyser, tau_plus_analyser),
                 contract_pion_analysers(production_components.f3_imaginary, tau_minus_analyser, tau_plus_analyser)};
+    }
+
+    PolynomialComponents polynomial_components(const TauPairKinematicPoint& kinematics, const FourMomentum& pion_minus_lab,
+                                               const FourMomentum& pion_plus_lab) const {
+        const auto tau_minus_analyser = tau_minus_pion_analyser(kinematics, pion_minus_lab);
+        const auto tau_plus_analyser = tau_plus_pion_analyser(kinematics, pion_plus_lab);
+        const SpinDensityPolynomialComponents production_components = production_.polynomial_components(kinematics);
+        return {
+            contract_pion_analysers(production_components.sm, tau_minus_analyser, tau_plus_analyser),
+            contract_pion_analysers(production_components.f2_real, tau_minus_analyser, tau_plus_analyser),
+            contract_pion_analysers(production_components.f2_imaginary, tau_minus_analyser, tau_plus_analyser),
+            contract_pion_analysers(production_components.f3_real, tau_minus_analyser, tau_plus_analyser),
+            contract_pion_analysers(production_components.f3_imaginary, tau_minus_analyser, tau_plus_analyser),
+            contract_pion_analysers(production_components.f2_real_f2_real, tau_minus_analyser, tau_plus_analyser),
+            contract_pion_analysers(production_components.f2_real_f2_imaginary, tau_minus_analyser, tau_plus_analyser),
+            contract_pion_analysers(production_components.f2_real_f3_real, tau_minus_analyser, tau_plus_analyser),
+            contract_pion_analysers(production_components.f2_real_f3_imaginary, tau_minus_analyser, tau_plus_analyser),
+            contract_pion_analysers(production_components.f2_imaginary_f2_imaginary, tau_minus_analyser, tau_plus_analyser),
+            contract_pion_analysers(production_components.f2_imaginary_f3_real, tau_minus_analyser, tau_plus_analyser),
+            contract_pion_analysers(production_components.f2_imaginary_f3_imaginary, tau_minus_analyser, tau_plus_analyser),
+            contract_pion_analysers(production_components.f3_real_f3_real, tau_minus_analyser, tau_plus_analyser),
+            contract_pion_analysers(production_components.f3_real_f3_imaginary, tau_minus_analyser, tau_plus_analyser),
+            contract_pion_analysers(production_components.f3_imaginary_f3_imaginary, tau_minus_analyser, tau_plus_analyser),
+        };
     }
 
 private:
