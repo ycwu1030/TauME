@@ -2,9 +2,14 @@
 #define TAUAMP_TAUTAU_PRODUCTION_H_
 
 #include <array>
+#include <algorithm>
 #include <cmath>
 #include <complex>
 #include <cstddef>
+#include <iomanip>
+#include <cstdlib>
+#include <iostream>
+#include <sstream>
 #include <stdexcept>
 
 #include "tauamp/tautau/kinematics.h"
@@ -277,10 +282,28 @@ private:
     std::array<Complex, 16> entries_{};
 };
 
+struct ComplexResidueDiagnostics {
+    double maximum_imaginary{};
+    std::size_t above_strict_threshold{};
+    long long maximum_entry{-1};
+    std::size_t maximum_row{};
+    std::size_t maximum_column{};
+};
+
+inline ComplexResidueDiagnostics& complex_residue_diagnostics() {
+    static ComplexResidueDiagnostics result;
+    return result;
+}
+
+inline long long& complex_diagnostic_entry() {
+    static long long entry = -1;
+    return entry;
+}
+
 inline ComplexPauliBasisMatrix coefficients(const TauPairKinematicPoint& kinematics, const PairContract& contract) {
     const PairCenterOfMass& pair_cm = kinematics.pair_cm();
-    const DiracMatrix base_minus = slash(components(pair_cm.tau_minus)) + kinematics.tau_mass() * DiracMatrix::identity();
-    const DiracMatrix base_plus = slash(components(pair_cm.tau_plus)) - kinematics.tau_mass() * DiracMatrix::identity();
+    const DiracMatrix base_minus = slash(components(pair_cm.tau_minus)) + kinematics.tau_minus_mass() * DiracMatrix::identity();
+    const DiracMatrix base_plus = slash(components(pair_cm.tau_plus)) - kinematics.tau_plus_mass() * DiracMatrix::identity();
     const auto axes = spin_axes(pair_cm.electron, pair_cm.tau_minus);
     std::array<std::array<Complex, 4>, 4> values{};
 
@@ -289,13 +312,16 @@ inline ComplexPauliBasisMatrix coefficients(const TauPairKinematicPoint& kinemat
             DiracMatrix minus_projector = base_minus;
             DiracMatrix plus_projector = base_plus;
             if (minus_index)
-                minus_projector = base_minus * (DiracMatrix::identity() + gamma_five() * slash(spin_vector(pair_cm.tau_minus, ((minus_index == 1) ? axes.transverse : (minus_index == 2) ? axes.normal : axes.longitudinal), kinematics.tau_mass()))) * 0.5;
+                minus_projector = base_minus * (DiracMatrix::identity() + gamma_five() * slash(spin_vector(pair_cm.tau_minus, ((minus_index == 1) ? axes.transverse : (minus_index == 2) ? axes.normal : axes.longitudinal), kinematics.tau_minus_mass()))) * 0.5;
             if (plus_index)
-                plus_projector = base_plus * (DiracMatrix::identity() + gamma_five() * slash(spin_vector(pair_cm.tau_plus, ((plus_index == 1) ? axes.transverse : (plus_index == 2) ? axes.normal : axes.longitudinal), kinematics.tau_mass()))) * 0.5;
+                plus_projector = base_plus * (DiracMatrix::identity() + gamma_five() * slash(spin_vector(pair_cm.tau_plus, ((plus_index == 1) ? axes.transverse : (plus_index == 2) ? axes.normal : axes.longitudinal), kinematics.tau_plus_mass()))) * 0.5;
             values[minus_index][plus_index] = contract(minus_projector, plus_projector);
         }
     }
 
+    if (std::getenv("TAUAMP_DEBUG_COMPLEX") != nullptr)
+        std::cerr << "trace_basis_debug v00=" << values[0][0] << " v30=" << values[3][0]
+                  << " v03=" << values[0][3] << " v33=" << values[3][3] << '\n';
     ComplexPauliBasisMatrix result;
     result(0, 0) = values[0][0];
     for (std::size_t minus_index = 1; minus_index < 4; ++minus_index) result(minus_index, 0) = 2.0 * values[minus_index][0] - result(0, 0);
@@ -312,8 +338,34 @@ inline PauliBasisMatrix real_coefficients(const ComplexPauliBasisMatrix& complex
     PauliBasisMatrix result;
     for (std::size_t row = 0; row < 4; ++row) {
         for (std::size_t column = 0; column < 4; ++column) {
-            if (std::abs(complex_matrix(row, column).imag()) > 2e-9)
-                throw std::runtime_error("summed production coefficient has an unexpected imaginary residue");
+            auto& diagnostics = complex_residue_diagnostics();
+            const double imaginary = std::abs(complex_matrix(row, column).imag());
+            if (imaginary > diagnostics.maximum_imaginary) {
+                diagnostics.maximum_imaginary = imaginary;
+                diagnostics.maximum_entry = complex_diagnostic_entry();
+                diagnostics.maximum_row = row;
+                diagnostics.maximum_column = column;
+            }
+            if (std::abs(complex_matrix(row, column).imag()) > 2e-9) {
+                ++diagnostics.above_strict_threshold;
+                if (std::getenv("TAUAMP_ALLOW_IMAGINARY_RESIDUE") != nullptr) {
+                    result(row, column) = complex_matrix(row, column).real();
+                    continue;
+                }
+                if (std::getenv("TAUAMP_DEBUG_COMPLEX") != nullptr) {
+                    std::cerr << "complex_matrix_debug row=" << row << " column=" << column << '\n';
+                    for (std::size_t debug_row = 0; debug_row < 4; ++debug_row) {
+                        for (std::size_t debug_column = 0; debug_column < 4; ++debug_column)
+                            std::cerr << "  c[" << debug_row << "][" << debug_column << "]="
+                                      << std::setprecision(17) << complex_matrix(debug_row, debug_column) << '\n';
+                    }
+                }
+                std::ostringstream detail;
+                detail << std::scientific << std::setprecision(17) << complex_matrix(row, column).imag();
+                throw std::runtime_error("summed production coefficient has an unexpected imaginary residue at row=" +
+                                         std::to_string(row) + ", column=" + std::to_string(column) + ", imag=" +
+                                         detail.str());
+            }
             result(row, column) = complex_matrix(row, column).real();
         }
     }

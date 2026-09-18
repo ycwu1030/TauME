@@ -114,6 +114,7 @@ public:
 private:
     PionPairEventLoopRecord process_entry(Long64_t entry) const {
         try {
+            tautau::detail::complex_diagnostic_entry() = entry;
             return make_pion_pair_event_loop_record(entry, evaluator_.evaluate(reader_.read(entry)));
         } catch (const std::exception& error) {
             throw std::runtime_error("cannot process Delphes entry " + std::to_string(entry) + ": " + error.what());

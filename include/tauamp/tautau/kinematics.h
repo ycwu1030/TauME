@@ -109,17 +109,21 @@ struct PairCenterOfMass {
 class TauPairKinematicPoint {
 public:
     TauPairKinematicPoint(const BeamState& beams, const FourMomentum& tau_minus_lab, const FourMomentum& tau_plus_lab,
-                      double tau_mass)
-        : beams_(beams), tau_minus_lab_(tau_minus_lab), tau_plus_lab_(tau_plus_lab), tau_mass_(tau_mass) {
-        if (tau_mass_ <= 0.0) throw std::invalid_argument("tau mass must be positive");
+                      double tau_mass, bool require_beam_conservation = true)
+        : TauPairKinematicPoint(beams, tau_minus_lab, tau_plus_lab, tau_mass, tau_mass, require_beam_conservation) {}
+
+    TauPairKinematicPoint(const BeamState& beams, const FourMomentum& tau_minus_lab, const FourMomentum& tau_plus_lab,
+                          double tau_minus_mass, double tau_plus_mass, bool require_beam_conservation)
+        : beams_(beams), tau_minus_lab_(tau_minus_lab), tau_plus_lab_(tau_plus_lab), tau_minus_mass_(tau_minus_mass), tau_plus_mass_(tau_plus_mass) {
+        if (tau_minus_mass_ <= 0.0 || tau_plus_mass_ <= 0.0) throw std::invalid_argument("tau masses must be positive");
         const FourMomentum total = beams_.electron_lab() + beams_.positron_lab();
         const FourMomentum final_total = tau_minus_lab_ + tau_plus_lab_;
-        if (std::abs(total.px() - final_total.px()) > detail::kKinematicTolerance ||
+        if (require_beam_conservation && (std::abs(total.px() - final_total.px()) > detail::kKinematicTolerance ||
             std::abs(total.py() - final_total.py()) > detail::kKinematicTolerance ||
             std::abs(total.pz() - final_total.pz()) > detail::kKinematicTolerance ||
-            std::abs(total.energy() - final_total.energy()) > detail::kKinematicTolerance)
+            std::abs(total.energy() - final_total.energy()) > detail::kKinematicTolerance))
             throw std::invalid_argument("tau-pair momenta must conserve the beam four-momentum");
-        if (sqrt_s() <= 2.0 * tau_mass_) throw std::invalid_argument("pair invariant mass must exceed tau-pair threshold");
+        if (sqrt_s() <= tau_minus_mass_ + tau_plus_mass_) throw std::invalid_argument("pair invariant mass must exceed tau-pair threshold");
 
         to_pair_cm_beta_ = {{-total.px() / total.energy(), -total.py() / total.energy(), -total.pz() / total.energy()}};
         electron_cm_before_rotation_ = beams_.electron_lab().boosted(to_pair_cm_beta_);
@@ -136,7 +140,9 @@ public:
         return detail::rotate_to_electron_axis(lab_momentum.boosted(to_pair_cm_beta_), electron_cm_before_rotation_);
     }
     double sqrt_s() const { return beams_.sqrt_s(); }
-    double tau_mass() const { return tau_mass_; }
+    double tau_mass() const { return 0.5 * (tau_minus_mass_ + tau_plus_mass_); }
+    double tau_minus_mass() const { return tau_minus_mass_; }
+    double tau_plus_mass() const { return tau_plus_mass_; }
     double electron_polarization() const { return beams_.electron_polarization(); }
     double positron_polarization() const { return beams_.positron_polarization(); }
 
@@ -144,7 +150,8 @@ private:
     BeamState beams_;
     FourMomentum tau_minus_lab_;
     FourMomentum tau_plus_lab_;
-    double tau_mass_;
+    double tau_minus_mass_;
+    double tau_plus_mass_;
     std::array<double, 3> to_pair_cm_beta_{};
     FourMomentum electron_cm_before_rotation_;
     PairCenterOfMass pair_cm_;

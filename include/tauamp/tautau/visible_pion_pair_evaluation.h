@@ -87,6 +87,15 @@ public:
         return {solution_set.status, std::move(entries)};
     }
 
+    PionPairVisibleEventEvaluation evaluate_truth(const TauPairKinematicPoint& point,
+                                                   const FourMomentum& pion_minus_lab,
+                                                   const FourMomentum& pion_plus_lab) const {
+        const PionPairKinematicHypothesis hypothesis{point, pion_minus_lab, pion_plus_lab, KinematicPointOrigin::truth};
+        return {HadronicTauPairSolutionStatus::one_solution,
+                {{hypothesis, matrix_element_.components(hypothesis),
+                  matrix_element_.polynomial_components(hypothesis), 1.0}}};
+    }
+
 private:
     PionPairMatrixElement matrix_element_;
 };

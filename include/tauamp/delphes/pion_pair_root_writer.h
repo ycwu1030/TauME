@@ -45,6 +45,14 @@ inline const char* object_source_name(PionObjectSource source) {
             return "generated";
         case PionObjectSource::reconstructed:
             return "reconstructed";
+        case PionObjectSource::truth:
+            return "truth";
+        case PionObjectSource::truth_neutrino:
+            return "truth_neutrino";
+        case PionObjectSource::truth_tau_reconstructed_pions:
+            return "truth_tau_reconstructed_pions";
+        case PionObjectSource::truth_neutrino_reconstructed_pions:
+            return "truth_neutrino_reconstructed_pions";
     }
     throw std::invalid_argument("pion object source is invalid");
 }
@@ -110,7 +118,9 @@ inline std::string metadata_manifest(const PionPairRootOutputMetadata& metadata)
     manifest << "component_ordering=sm,f2_real,f2_imaginary,f3_real,f3_imaginary,f2_real_f2_real,f2_real_f2_imaginary,f2_real_f3_real,f2_real_f3_imaginary,f2_imaginary_f2_imaginary,f2_imaginary_f3_real,f2_imaginary_f3_imaginary,f3_real_f3_real,f3_real_f3_imaginary,f3_imaginary_f3_imaginary\n";
     manifest << "quadratic_cross_term_convention=stored_coefficient_includes_both_amplitude_orderings\n";
     manifest << "branch_weight_rule=equal_kinematic_weight\n";
-    manifest << "truth_tau_input_used=false\n";
+    const bool truth_tau_input = metadata.object_source == PionObjectSource::truth || metadata.object_source == PionObjectSource::truth_neutrino || metadata.object_source == PionObjectSource::truth_tau_reconstructed_pions || metadata.object_source == PionObjectSource::truth_neutrino_reconstructed_pions;
+    manifest << "truth_tau_input_used=" << (truth_tau_input ? "true" : "false") << '\n';
+    manifest << "truth_neutrino_input_used=" << (truth_tau_input ? "true" : "false") << '\n';
     manifest << "classification_encoding=supported_pion_pair:0,recognized_unsupported:1,ambiguous:2,unclassified:3\n";
     manifest << "tau_momentum_provenance_encoding=generator_truth_available:0,unavailable:1\n";
     manifest << "eligibility_status_encoding=unsupported_input:0,kinematic_no_solution:1,kinematic_non_unique:2,evaluable_one_solution:3,evaluable_two_solutions:4\n";

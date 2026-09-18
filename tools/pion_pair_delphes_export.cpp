@@ -64,7 +64,11 @@ double parse_finite_number(const std::string& value, const char* name) {
 tauamp::delphes::PionObjectSource parse_pion_source(const std::string& value) {
     if (value == "generated") return tauamp::delphes::PionObjectSource::generated;
     if (value == "reconstructed") return tauamp::delphes::PionObjectSource::reconstructed;
-    throw std::invalid_argument("--pion-source must be generated or reconstructed");
+    if (value == "truth") return tauamp::delphes::PionObjectSource::truth;
+    if (value == "truth_neutrino") return tauamp::delphes::PionObjectSource::truth_neutrino;
+    if (value == "truth_tau_reconstructed_pions") return tauamp::delphes::PionObjectSource::truth_tau_reconstructed_pions;
+    if (value == "truth_neutrino_reconstructed_pions") return tauamp::delphes::PionObjectSource::truth_neutrino_reconstructed_pions;
+    throw std::invalid_argument("--pion-source must be generated, reconstructed, truth_neutrino, truth_tau_reconstructed_pions, or truth_neutrino_reconstructed_pions");
 }
 
 tauamp::tautau::ProductionBosons parse_production_bosons(const std::string& value) {
@@ -135,6 +139,12 @@ void print_summary(const tauamp::delphes::PionPairEventLoopSummary& summary) {
     std::cout << "kinematic_non_unique=" << summary.kinematic_non_unique << '\n';
     std::cout << "evaluable_one_solution=" << summary.evaluable_one_solution << '\n';
     std::cout << "evaluable_two_solutions=" << summary.evaluable_two_solutions << '\n';
+    const auto& diagnostics = tauamp::tautau::detail::complex_residue_diagnostics();
+    std::cout << "maximum_imaginary_residue=" << diagnostics.maximum_imaginary << '\n';
+    std::cout << "imaginary_residue_above_strict_threshold=" << diagnostics.above_strict_threshold << '\n';
+    std::cout << "maximum_imaginary_entry=" << diagnostics.maximum_entry << '\n';
+    std::cout << "maximum_imaginary_row=" << diagnostics.maximum_row << '\n';
+    std::cout << "maximum_imaginary_column=" << diagnostics.maximum_column << '\n';
 }
 
 }  // namespace
