@@ -3,7 +3,7 @@ CXXFLAGS := -std=c++17 -Wall -Wextra -Werror -I../../include
 ROOT_CXXFLAGS := $(shell root-config --cflags)
 ROOT_LDFLAGS := $(shell root-config --libs)
 
-TESTS := kinematics_test.x spin_density_test.x production_test.x pion_pair_test.x pion_pair_hypothesis_test.x pion_pair_marginalization_test.x reference_fixture_test.x hadronic_tau_pair_kinematics_test.x hadronic_tau_pair_fixture_test.x visible_pion_pair_evaluation_test.x legacy_twofold_regression_test.x lab_frame_pion_test.x legacy_compile_test.x
+TESTS := kinematics_test.x spin_density_test.x production_test.x pion_pair_test.x pion_pair_hypothesis_test.x pion_pair_marginalization_test.x reference_fixture_test.x hadronic_tau_pair_kinematics_test.x hadronic_tau_pair_fixture_test.x visible_pion_pair_evaluation_test.x legacy_twofold_regression_test.x lab_frame_pion_test.x legacy_compile_test.x rho_a1_currents_test.x ordered_channel_adapter_test.x common_channel_export_test.x hadronic_analyser_test.x hadronic_pair_matrix_element_test.x ordered_channel_evaluation_test.x ordered_channel_all_channels_smoke_test.x
 
 all: $(TESTS)
 
