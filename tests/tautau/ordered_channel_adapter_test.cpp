@@ -21,8 +21,15 @@ int main() {
     constexpr double pi = 3.14159265358979323846;
     const std::vector<ReconstructedPion> pi_pair{object(1, 211, 0.4, 0.0), object(2, -211, 0.4, 0.0)};
     assert(enumerate_ordered_channel_hypotheses(OrderedChannel::pi_pi, pi_pair, {}).size() == 1U);
-    assert(enumerate_ordered_channel_hypotheses(OrderedChannel::pi_rho, pi_pair,
-                                                 {object(10, 111, 0.4, pi)}).size() == 1U);
+    const auto pi_rho_with_extra_neutral = enumerate_ordered_channel_hypotheses(
+        OrderedChannel::pi_rho, pi_pair, {object(10, 111, 0.4, pi), object(11, 111, 0.4, 0.0)});
+    assert(pi_rho_with_extra_neutral.size() == 1U);
+    assert(pi_rho_with_extra_neutral.front().tau_minus.neutral_indices.front() == 10U);
+    assert(pi_rho_with_extra_neutral.front().unused_neutral_count == 1U);
+    const auto pi_pi_with_extra_neutral = enumerate_ordered_channel_hypotheses(
+        OrderedChannel::pi_pi, pi_pair, {object(10, 111, 0.4, pi)});
+    assert(pi_pi_with_extra_neutral.size() == 1U);
+    assert(pi_pi_with_extra_neutral.front().unused_neutral_count == 1U);
     assert(enumerate_ordered_channel_hypotheses(OrderedChannel::rho_pi, pi_pair,
                                                  {object(10, 111, 0.4, pi)}).size() == 1U);
     const std::vector<ReconstructedPion> rho_pair{object(1, 211, 0.4, 0.0), object(2, -211, 0.4, pi)};
@@ -33,10 +40,16 @@ int main() {
         object(3, -211, 0.4, 0.0), object(4, -211, 0.4, 0.0)};
     assert(enumerate_ordered_channel_hypotheses(OrderedChannel::pi_a1, mixed, {}).size() == 2U);
     assert(enumerate_ordered_channel_hypotheses(OrderedChannel::a1_pi, mixed, {}).size() == 2U);
-    assert(enumerate_ordered_channel_hypotheses(OrderedChannel::rho_a1, mixed,
-                                                 {object(10, 111, 0.4, pi)}).size() == 2U);
-    assert(enumerate_ordered_channel_hypotheses(OrderedChannel::a1_rho, mixed,
-                                                 {object(10, 111, 0.4, pi)}).size() == 2U);
+    const auto rho_a1 = enumerate_ordered_channel_hypotheses(
+        OrderedChannel::rho_a1, mixed, {object(10, 111, 0.4, pi)});
+    const auto a1_rho = enumerate_ordered_channel_hypotheses(
+        OrderedChannel::a1_rho, mixed, {object(10, 111, 0.4, pi)});
+    assert(rho_a1.size() == 2U);
+    assert(a1_rho.size() == 2U);
+    assert(rho_a1.front().tau_plus.mode == "rho");
+    assert(rho_a1.front().tau_minus.mode == "a1");
+    assert(a1_rho.front().tau_plus.mode == "a1");
+    assert(a1_rho.front().tau_minus.mode == "rho");
     std::vector<ReconstructedPion> a1_pair;
     for (std::size_t index = 1; index <= 3; ++index) a1_pair.push_back(object(index, 211, 0.3 + 0.05 * index, 0.0));
     for (std::size_t index = 4; index <= 6; ++index) a1_pair.push_back(object(index, -211, 0.3 + 0.03 * index, 0.0));

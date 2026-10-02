@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <functional>
+#include <numeric>
 #include <stdexcept>
 #include <string>
 #include <tuple>
@@ -63,6 +65,10 @@ struct OrderedChannelHypothesis {
     OrderedDecaySide tau_plus;
     OrderedDecaySide tau_minus;
     std::vector<double> rho_masses;
+    std::vector<double> a1_masses;
+    double normalized_mass_cost{0.0};
+    std::size_t unused_charged_count{0};
+    std::size_t unused_neutral_count{0};
 };
 
 namespace detail {
@@ -84,26 +90,64 @@ inline std::pair<std::vector<ReconstructedPion>, std::vector<ReconstructedPion>>
     return {plus, minus};
 }
 
-inline std::vector<ReconstructedPion> hardest_neutrals(const std::vector<ReconstructedPion>& neutral,
-                                                        std::size_t required) {
+inline std::vector<ReconstructedPion> all_neutrals(const std::vector<ReconstructedPion>& neutral) {
     for (const auto& object : neutral) {
         if (object.charge() != 0) throw std::invalid_argument("neutral collection contains a charged pion");
     }
-    if (neutral.size() < required) return {};
     std::vector<ReconstructedPion> result = neutral;
     std::sort(result.begin(), result.end(), [](const ReconstructedPion& left, const ReconstructedPion& right) {
-        if (left.pt != right.pt) return left.pt > right.pt;
         return left.index < right.index;
     });
-    result.resize(required);
     return result;
+}
+
+template <typename T, typename Callback>
+inline void choose_subsets(const std::vector<T>& objects, std::size_t required, Callback callback) {
+    if (required > objects.size()) return;
+    std::vector<T> selected;
+    std::function<void(std::size_t)> visit = [&](std::size_t begin) {
+        if (selected.size() == required) {
+            callback(selected);
+            return;
+        }
+        const std::size_t remaining = required - selected.size();
+        for (std::size_t index = begin; index + remaining <= objects.size(); ++index) {
+            selected.push_back(objects[index]);
+            visit(index + 1U);
+            selected.pop_back();
+        }
+    };
+    visit(0U);
 }
 
 inline double pair_mass(const ReconstructedPion& charged, const ReconstructedPion& neutral) {
     return std::sqrt(std::max((charged.momentum + neutral.momentum).mass_squared(), 0.0));
 }
 
-inline bool rho_pass(double mass) { return std::abs(mass - g6_rho_mass) < g6_rho_width; }
+inline constexpr double g9_rho_window_multiplier = 3.0;
+inline constexpr double g9_a1_mass = 1.23;
+inline constexpr double g9_a1_width = 0.42;
+inline constexpr double g9_a1_window_multiplier = 3.0;
+
+inline bool rho_pass(double mass) {
+    return mass + 1.0e-12 >= g6_charged_pion_mass + g6_neutral_pion_mass &&
+           std::abs(mass - g6_rho_mass) < g9_rho_window_multiplier * g6_rho_width;
+}
+
+inline bool a1_pass(double mass) {
+    return mass + 1.0e-12 >= 3.0 * g6_charged_pion_mass &&
+           std::abs(mass - g9_a1_mass) < g9_a1_window_multiplier * g9_a1_width;
+}
+
+inline double rho_mass_cost(double mass) {
+    const double z = (mass - g6_rho_mass) / g6_rho_width;
+    return z * z;
+}
+
+inline double a1_mass_cost(double mass) {
+    const double z = (mass - g9_a1_mass) / g9_a1_width;
+    return z * z;
+}
 
 inline double delta_phi(double left, double right) {
     constexpr double pi = 3.14159265358979323846;
@@ -143,87 +187,142 @@ inline OrderedDecaySide a1_side(const std::vector<ReconstructedPion>& same_charg
 inline std::vector<OrderedChannelHypothesis> enumerate_ordered_channel_hypotheses(
     OrderedChannel channel, const std::vector<ReconstructedPion>& charged,
     const std::vector<ReconstructedPion>& neutral) {
-    const auto [plus, minus] = detail::split_charges(charged);
+    const auto charge_split = detail::split_charges(charged);
+    const auto& plus = charge_split.first;
+    const auto& minus = charge_split.second;
+    const auto neutrals = detail::all_neutrals(neutral);
     std::vector<OrderedChannelHypothesis> result;
     const auto add = [&](OrderedDecaySide tau_plus, OrderedDecaySide tau_minus,
-                         std::vector<double> masses = {}) {
-        result.push_back({channel, result.size(), std::move(tau_plus), std::move(tau_minus), std::move(masses)});
+                         std::vector<double> rho_masses = {}, std::vector<double> a1_masses = {}) {
+        const double mass_cost =
+            std::accumulate(rho_masses.begin(), rho_masses.end(), 0.0, [](double sum, double mass) {
+                return sum + detail::rho_mass_cost(mass);
+            }) +
+            std::accumulate(a1_masses.begin(), a1_masses.end(), 0.0, [](double sum, double mass) {
+                return sum + detail::a1_mass_cost(mass);
+            });
+        const std::size_t slot_count = 2U + rho_masses.size() + a1_masses.size();
+        std::vector<std::size_t> used_charged;
+        used_charged.insert(used_charged.end(), tau_plus.charged_indices.begin(), tau_plus.charged_indices.end());
+        used_charged.insert(used_charged.end(), tau_minus.charged_indices.begin(), tau_minus.charged_indices.end());
+        std::vector<std::size_t> used_neutral;
+        used_neutral.insert(used_neutral.end(), tau_plus.neutral_indices.begin(), tau_plus.neutral_indices.end());
+        used_neutral.insert(used_neutral.end(), tau_minus.neutral_indices.begin(), tau_minus.neutral_indices.end());
+        const auto is_used = [](const std::vector<std::size_t>& used, std::size_t index) {
+            return std::find(used.begin(), used.end(), index) != used.end();
+        };
+        std::size_t unused_charged = 0U;
+        for (const auto& object : charged) if (!is_used(used_charged, object.index)) ++unused_charged;
+        std::size_t unused_neutral = 0U;
+        for (const auto& object : neutral) if (!is_used(used_neutral, object.index)) ++unused_neutral;
+        result.push_back({channel, result.size(), std::move(tau_plus), std::move(tau_minus),
+                          std::move(rho_masses), std::move(a1_masses),
+                          mass_cost / static_cast<double>(slot_count), unused_charged, unused_neutral});
     };
 
     if (channel == OrderedChannel::pi_pi) {
-        if (plus.size() == 1U && minus.size() == 1U && neutral.empty())
-            add(detail::pion_side(plus[0]), detail::pion_side(minus[0]));
+        for (const auto& plus_pion : plus)
+            for (const auto& minus_pion : minus)
+                add(detail::pion_side(plus_pion), detail::pion_side(minus_pion));
     } else if (channel == OrderedChannel::pi_rho || channel == OrderedChannel::rho_pi) {
-        const auto pi0 = detail::hardest_neutrals(neutral, 1U);
-        if (plus.size() == 1U && minus.size() == 1U && pi0.size() == 1U) {
-            const auto& rho_charged = channel == OrderedChannel::pi_rho ? minus[0] : plus[0];
-            const double mass = detail::pair_mass(rho_charged, pi0[0]);
-            if (detail::rho_pass(mass)) {
+        for (const auto& plus_pion : plus) for (const auto& minus_pion : minus)
+            for (const auto& pi0 : neutrals) {
+                const auto& rho_charged = channel == OrderedChannel::pi_rho ? minus_pion : plus_pion;
+                const double mass = detail::pair_mass(rho_charged, pi0);
+                if (!detail::rho_pass(mass)) continue;
                 if (channel == OrderedChannel::pi_rho)
-                    add(detail::pion_side(plus[0]), detail::rho_side(minus[0], pi0[0]), {mass});
+                    add(detail::pion_side(plus_pion), detail::rho_side(minus_pion, pi0), {mass});
                 else
-                    add(detail::rho_side(plus[0], pi0[0]), detail::pion_side(minus[0]), {mass});
+                    add(detail::rho_side(plus_pion, pi0), detail::pion_side(minus_pion), {mass});
             }
-        }
     } else if (channel == OrderedChannel::rho_rho) {
-        const auto pi0 = detail::hardest_neutrals(neutral, 2U);
-        if (plus.size() == 1U && minus.size() == 1U && pi0.size() == 2U) {
-            struct Assignment { double cost; double sum_delta_r; std::size_t plus_index; std::size_t minus_index; double plus_mass; double minus_mass; };
-            std::vector<Assignment> assignments;
-            for (const auto ordering : {std::pair<std::size_t, std::size_t>{0U, 1U}, {1U, 0U}}) {
-                const double plus_mass = detail::pair_mass(plus[0], pi0[ordering.first]);
-                const double minus_mass = detail::pair_mass(minus[0], pi0[ordering.second]);
-                assignments.push_back({
-                    std::pow(plus_mass - g6_rho_mass, 2) + std::pow(minus_mass - g6_rho_mass, 2),
-                    detail::delta_r(plus[0], pi0[ordering.first]) + detail::delta_r(minus[0], pi0[ordering.second]),
-                    ordering.first, ordering.second, plus_mass, minus_mass});
-            }
-            auto best = assignments[0];
-            const auto& other = assignments[1];
-            if (other.cost < best.cost) best = other;
-            if (std::abs(assignments[0].cost - assignments[1].cost) <= 1.0e-4)
-                best = assignments[0].sum_delta_r <= assignments[1].sum_delta_r ? assignments[0] : assignments[1];
-            if (detail::rho_pass(best.plus_mass) && detail::rho_pass(best.minus_mass))
-                add(detail::rho_side(plus[0], pi0[best.plus_index]),
-                    detail::rho_side(minus[0], pi0[best.minus_index]), {best.plus_mass, best.minus_mass});
+        for (const auto& plus_pion : plus) for (const auto& minus_pion : minus)
+            for (std::size_t first = 0; first < neutrals.size(); ++first)
+                for (std::size_t second = 0; second < neutrals.size(); ++second) {
+                    if (first == second) continue;
+                    const double plus_mass = detail::pair_mass(plus_pion, neutrals[first]);
+                    const double minus_mass = detail::pair_mass(minus_pion, neutrals[second]);
+                    if (detail::rho_pass(plus_mass) && detail::rho_pass(minus_mass))
+                        add(detail::rho_side(plus_pion, neutrals[first]),
+                            detail::rho_side(minus_pion, neutrals[second]), {plus_mass, minus_mass});
+                }
+    } else if (channel == OrderedChannel::pi_a1) {
+        for (const auto& direct : plus) {
+            std::vector<ReconstructedPion> remaining_plus;
+            for (const auto& object : plus) if (object.index != direct.index) remaining_plus.push_back(object);
+            detail::choose_subsets(minus, 2U, [&](const auto& same_minus) {
+                for (const auto& opposite : remaining_plus) {
+                    const double mass = std::sqrt(std::max(
+                        (same_minus[0].momentum + same_minus[1].momentum + opposite.momentum).mass_squared(), 0.0));
+                    if (detail::a1_pass(mass))
+                        add(detail::pion_side(direct), detail::a1_side(same_minus, opposite), {}, {mass});
+                }
+            });
         }
-    } else if (channel == OrderedChannel::pi_a1 && plus.size() == 2U && minus.size() == 2U && neutral.empty()) {
-        for (std::size_t direct = 0; direct < plus.size(); ++direct)
-            add(detail::pion_side(plus[direct]), detail::a1_side(minus, plus[1U - direct]));
-    } else if (channel == OrderedChannel::a1_pi && plus.size() == 2U && minus.size() == 2U && neutral.empty()) {
-        for (std::size_t direct = 0; direct < minus.size(); ++direct)
-            add(detail::a1_side(plus, minus[1U - direct]), detail::pion_side(minus[direct]));
-    } else if (channel == OrderedChannel::rho_a1) {
-        const auto pi0 = detail::hardest_neutrals(neutral, 1U);
-        if (plus.size() == 2U && minus.size() == 2U && pi0.size() == 1U) {
-            for (std::size_t rho = 0; rho < minus.size(); ++rho) {
-                const double mass = detail::pair_mass(minus[rho], pi0[0]);
-                if (detail::rho_pass(mass))
-                    add(detail::a1_side(plus, minus[1U - rho]), detail::rho_side(minus[rho], pi0[0]), {mass});
+    } else if (channel == OrderedChannel::a1_pi) {
+        for (const auto& direct : minus) {
+            std::vector<ReconstructedPion> remaining_minus;
+            for (const auto& object : minus) if (object.index != direct.index) remaining_minus.push_back(object);
+            detail::choose_subsets(plus, 2U, [&](const auto& same_plus) {
+                for (const auto& opposite : remaining_minus) {
+                    const double mass = std::sqrt(std::max(
+                        (same_plus[0].momentum + same_plus[1].momentum + opposite.momentum).mass_squared(), 0.0));
+                    if (detail::a1_pass(mass))
+                        add(detail::a1_side(same_plus, opposite), detail::pion_side(direct), {}, {mass});
+                }
+            });
+        }
+    } else if (channel == OrderedChannel::rho_a1 || channel == OrderedChannel::a1_rho) {
+        if (channel == OrderedChannel::rho_a1) {
+            for (const auto& rho_charged : plus) for (const auto& pi0 : neutrals) {
+                const double rho_mass = detail::pair_mass(rho_charged, pi0);
+                if (!detail::rho_pass(rho_mass)) continue;
+                std::vector<ReconstructedPion> remaining_plus;
+                for (const auto& object : plus) if (object.index != rho_charged.index) remaining_plus.push_back(object);
+                detail::choose_subsets(minus, 2U, [&](const auto& same_minus) {
+                    for (const auto& opposite : remaining_plus) {
+                        const double a1_mass = std::sqrt(std::max(
+                            (same_minus[0].momentum + same_minus[1].momentum + opposite.momentum).mass_squared(), 0.0));
+                        if (detail::a1_pass(a1_mass))
+                            add(detail::rho_side(rho_charged, pi0), detail::a1_side(same_minus, opposite),
+                                {rho_mass}, {a1_mass});
+                    }
+                });
+            }
+        } else {
+            for (const auto& rho_charged : minus) for (const auto& pi0 : neutrals) {
+                const double rho_mass = detail::pair_mass(rho_charged, pi0);
+                if (!detail::rho_pass(rho_mass)) continue;
+                std::vector<ReconstructedPion> remaining_minus;
+                for (const auto& object : minus) if (object.index != rho_charged.index) remaining_minus.push_back(object);
+                detail::choose_subsets(plus, 2U, [&](const auto& same_plus) {
+                    for (const auto& opposite : remaining_minus) {
+                        const double a1_mass = std::sqrt(std::max(
+                            (same_plus[0].momentum + same_plus[1].momentum + opposite.momentum).mass_squared(), 0.0));
+                        if (detail::a1_pass(a1_mass))
+                            add(detail::a1_side(same_plus, opposite), detail::rho_side(rho_charged, pi0),
+                                {rho_mass}, {a1_mass});
+                    }
+                });
             }
         }
-    } else if (channel == OrderedChannel::a1_rho) {
-        const auto pi0 = detail::hardest_neutrals(neutral, 1U);
-        if (plus.size() == 2U && minus.size() == 2U && pi0.size() == 1U) {
-            for (std::size_t rho = 0; rho < plus.size(); ++rho) {
-                const double mass = detail::pair_mass(plus[rho], pi0[0]);
-                if (detail::rho_pass(mass))
-                    add(detail::rho_side(plus[rho], pi0[0]), detail::a1_side(minus, plus[1U - rho]), {mass});
-            }
-        }
-    } else if (channel == OrderedChannel::a1_a1 && plus.size() == 3U && minus.size() == 3U && neutral.empty()) {
-        for (std::size_t plus_opposite = 0; plus_opposite < plus.size(); ++plus_opposite) {
-            for (std::size_t minus_opposite = 0; minus_opposite < minus.size(); ++minus_opposite) {
-                std::vector<ReconstructedPion> plus_same;
-                std::vector<ReconstructedPion> minus_same;
-                for (std::size_t index = 0; index < plus.size(); ++index)
-                    if (index != plus_opposite) plus_same.push_back(plus[index]);
-                for (std::size_t index = 0; index < minus.size(); ++index)
-                    if (index != minus_opposite) minus_same.push_back(minus[index]);
-                add(detail::a1_side(plus_same, minus[minus_opposite]),
-                    detail::a1_side(minus_same, plus[plus_opposite]));
-            }
-        }
+    } else if (channel == OrderedChannel::a1_a1) {
+        detail::choose_subsets(plus, 3U, [&](const auto& plus_triplet) {
+            detail::choose_subsets(minus, 3U, [&](const auto& minus_triplet) {
+                for (const auto& plus_opposite : plus_triplet) for (const auto& minus_opposite : minus_triplet) {
+                    std::vector<ReconstructedPion> plus_same, minus_same;
+                    for (const auto& object : plus_triplet) if (object.index != plus_opposite.index) plus_same.push_back(object);
+                    for (const auto& object : minus_triplet) if (object.index != minus_opposite.index) minus_same.push_back(object);
+                    const double plus_mass = std::sqrt(std::max(
+                        (plus_same[0].momentum + plus_same[1].momentum + minus_opposite.momentum).mass_squared(), 0.0));
+                    const double minus_mass = std::sqrt(std::max(
+                        (minus_same[0].momentum + minus_same[1].momentum + plus_opposite.momentum).mass_squared(), 0.0));
+                    if (detail::a1_pass(plus_mass) && detail::a1_pass(minus_mass))
+                        add(detail::a1_side(plus_same, minus_opposite), detail::a1_side(minus_same, plus_opposite),
+                            {}, {plus_mass, minus_mass});
+                }
+            });
+        });
     }
     return result;
 }

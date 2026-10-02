@@ -1,0 +1,12 @@
+{
+  "config_identity": "g9-selection-final-v1",
+  "selection_revision": "g9-v2-explanation-score-u0.10-r0.40-q0.30-c0.00",
+  "selector_family": "ordered_channel_explanation_score",
+  "parameters": {
+    "unexplained_object": 0.10,
+    "unexplained_resonance": 0.40,
+    "used_resonance_reward": 0.30,
+    "topology_complexity": 0.00
+  },
+  "status": "frozen_default"
+}

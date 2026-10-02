@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <optional>
 #include <stdexcept>
 #include <vector>
 
@@ -20,6 +21,8 @@ struct HadronicTauPairObservation {
 
 enum class HadronicTauPairSolutionStatus { no_solution, one_solution, two_solutions, non_unique };
 
+enum class HadronicTauPairInvalidReason { none, negative_neutrino_energy, nonzero_neutrino_mass_squared };
+
 struct HadronicTauPairKinematicSolution {
     TauPairKinematicPoint point;
     FourMomentum neutrino_minus_lab;
@@ -29,6 +32,7 @@ struct HadronicTauPairKinematicSolution {
 struct HadronicTauPairSolutionSet {
     HadronicTauPairSolutionStatus status;
     std::vector<HadronicTauPairKinematicSolution> solutions;
+    HadronicTauPairInvalidReason invalid_reason{HadronicTauPairInvalidReason::none};
 };
 
 class HadronicTauPairKinematicSolver {
@@ -81,8 +85,11 @@ public:
             if (std::abs(std::abs(bounded_c_minus) - 1.0) <= tolerance) {
                 const std::array<double, 3> direction{{bounded_c_minus * minus_direction[0], bounded_c_minus * minus_direction[1],
                                                         bounded_c_minus * minus_direction[2]}};
-                return one_solution(make_solution(observation, visible_minus_cm, visible_plus_cm, direction, tau_energy,
-                                                  tau_momentum, to_lab, tolerance));
+                HadronicTauPairInvalidReason invalid_reason = HadronicTauPairInvalidReason::none;
+                const auto solution = make_solution(observation, visible_minus_cm, visible_plus_cm, direction, tau_energy,
+                                                    tau_momentum, to_lab, tolerance, invalid_reason);
+                if (!solution) return no_solution(invalid_reason);
+                return one_solution(*solution);
             }
             return {HadronicTauPairSolutionStatus::non_unique, {}};
         }
@@ -97,9 +104,12 @@ public:
         const double discriminant = 1.0 - detail::spatial_dot(base, base);
         if (discriminant < -tolerance) return no_solution();
         if (discriminant <= tolerance) {
-            return one_solution(make_solution(observation, visible_minus_cm, visible_plus_cm,
-                                              detail::normalized(base, "tangent tau direction cannot vanish"), tau_energy,
-                                              tau_momentum, to_lab, tolerance));
+            HadronicTauPairInvalidReason invalid_reason = HadronicTauPairInvalidReason::none;
+            const auto solution = make_solution(observation, visible_minus_cm, visible_plus_cm,
+                                                detail::normalized(base, "tangent tau direction cannot vanish"), tau_energy,
+                                                tau_momentum, to_lab, tolerance, invalid_reason);
+            if (!solution) return no_solution(invalid_reason);
+            return one_solution(*solution);
         }
 
         const std::array<double, 3> cross = detail::spatial_cross(minus_direction, plus_direction);
@@ -108,42 +118,61 @@ public:
         const double scale = std::sqrt(discriminant);
         const std::array<double, 3> first{{base[0] + scale * normal[0], base[1] + scale * normal[1], base[2] + scale * normal[2]}};
         const std::array<double, 3> second{{base[0] - scale * normal[0], base[1] - scale * normal[1], base[2] - scale * normal[2]}};
-        HadronicTauPairSolutionSet result{HadronicTauPairSolutionStatus::two_solutions, {}};
-        result.solutions.push_back(
-            make_solution(observation, visible_minus_cm, visible_plus_cm, first, tau_energy, tau_momentum, to_lab, tolerance));
-        result.solutions.push_back(
-            make_solution(observation, visible_minus_cm, visible_plus_cm, second, tau_energy, tau_momentum, to_lab, tolerance));
+        HadronicTauPairSolutionSet result{HadronicTauPairSolutionStatus::no_solution, {}};
+        HadronicTauPairInvalidReason first_reason = HadronicTauPairInvalidReason::none;
+        HadronicTauPairInvalidReason second_reason = HadronicTauPairInvalidReason::none;
+        const auto first_solution = make_solution(observation, visible_minus_cm, visible_plus_cm, first, tau_energy,
+                                                  tau_momentum, to_lab, tolerance, first_reason);
+        const auto second_solution = make_solution(observation, visible_minus_cm, visible_plus_cm, second, tau_energy,
+                                                   tau_momentum, to_lab, tolerance, second_reason);
+        if (first_solution) result.solutions.push_back(*first_solution);
+        if (second_solution) result.solutions.push_back(*second_solution);
+        if (result.solutions.size() == 2U) result.status = HadronicTauPairSolutionStatus::two_solutions;
+        else if (result.solutions.size() == 1U) result.status = HadronicTauPairSolutionStatus::one_solution;
+        if (result.solutions.empty()) {
+            result.invalid_reason = first_reason != HadronicTauPairInvalidReason::none ? first_reason : second_reason;
+        }
         return result;
     }
 
 private:
     static double bound_unit(double value) { return value < -1.0 ? -1.0 : (value > 1.0 ? 1.0 : value); }
 
-    static HadronicTauPairSolutionSet no_solution() { return {HadronicTauPairSolutionStatus::no_solution, {}}; }
+    static HadronicTauPairSolutionSet no_solution(HadronicTauPairInvalidReason invalid_reason = HadronicTauPairInvalidReason::none) {
+        return {HadronicTauPairSolutionStatus::no_solution, {}, invalid_reason};
+    }
 
     static HadronicTauPairSolutionSet one_solution(HadronicTauPairKinematicSolution solution) {
         return {HadronicTauPairSolutionStatus::one_solution, {solution}};
     }
 
-    static HadronicTauPairKinematicSolution make_solution(const HadronicTauPairObservation& observation,
-                                                           const FourMomentum& visible_minus_cm,
-                                                           const FourMomentum& visible_plus_cm,
-                                                           const std::array<double, 3>& direction, double tau_energy,
-                                                           double tau_momentum, const std::array<double, 3>& to_lab,
-                                                           double tolerance) {
+    static std::optional<HadronicTauPairKinematicSolution> make_solution(const HadronicTauPairObservation& observation,
+                                                                          const FourMomentum& visible_minus_cm,
+                                                                          const FourMomentum& visible_plus_cm,
+                                                                          const std::array<double, 3>& direction,
+                                                                          double tau_energy, double tau_momentum,
+                                                                          const std::array<double, 3>& to_lab,
+                                                                          double tolerance,
+                                                                          HadronicTauPairInvalidReason& invalid_reason) {
         const FourMomentum tau_minus_cm(tau_momentum * direction[0], tau_momentum * direction[1], tau_momentum * direction[2],
                                          tau_energy);
         const FourMomentum tau_plus_cm(-tau_minus_cm.px(), -tau_minus_cm.py(), -tau_minus_cm.pz(), tau_energy);
         const FourMomentum neutrino_minus_cm = tau_minus_cm - visible_minus_cm;
         const FourMomentum neutrino_plus_cm = tau_plus_cm - visible_plus_cm;
-        if (neutrino_minus_cm.energy() < -tolerance || neutrino_plus_cm.energy() < -tolerance ||
-            std::abs(neutrino_minus_cm.mass_squared()) > tolerance || std::abs(neutrino_plus_cm.mass_squared()) > tolerance)
-            throw std::runtime_error("cone intersection generated an invalid neutrino candidate");
+        if (neutrino_minus_cm.energy() < -tolerance || neutrino_plus_cm.energy() < -tolerance) {
+            invalid_reason = HadronicTauPairInvalidReason::negative_neutrino_energy;
+            return std::nullopt;
+        }
+        if (std::abs(neutrino_minus_cm.mass_squared()) > tolerance || std::abs(neutrino_plus_cm.mass_squared()) > tolerance) {
+            invalid_reason = HadronicTauPairInvalidReason::nonzero_neutrino_mass_squared;
+            return std::nullopt;
+        }
 
         const FourMomentum tau_minus_lab = tau_minus_cm.boosted(to_lab);
         const FourMomentum tau_plus_lab = tau_plus_cm.boosted(to_lab);
-        return {TauPairKinematicPoint(observation.beams, tau_minus_lab, tau_plus_lab, observation.tau_mass),
-                neutrino_minus_cm.boosted(to_lab), neutrino_plus_cm.boosted(to_lab)};
+        return HadronicTauPairKinematicSolution{
+            TauPairKinematicPoint(observation.beams, tau_minus_lab, tau_plus_lab, observation.tau_mass),
+            neutrino_minus_cm.boosted(to_lab), neutrino_plus_cm.boosted(to_lab)};
     }
 };
 
