@@ -21,7 +21,12 @@ struct HadronicTauPairObservation {
 
 enum class HadronicTauPairSolutionStatus { no_solution, one_solution, two_solutions, non_unique };
 
-enum class HadronicTauPairInvalidReason { none, negative_neutrino_energy, nonzero_neutrino_mass_squared };
+enum class HadronicTauPairInvalidReason {
+    none,
+    negative_neutrino_energy,
+    nonzero_neutrino_mass_squared,
+    invalid_tau_direction
+};
 
 struct HadronicTauPairKinematicSolution {
     TauPairKinematicPoint point;
@@ -104,6 +109,8 @@ public:
         const double discriminant = 1.0 - detail::spatial_dot(base, base);
         if (discriminant < -tolerance) return no_solution();
         if (discriminant <= tolerance) {
+            if (detail::spatial_norm(base) < tolerance)
+                return no_solution(HadronicTauPairInvalidReason::invalid_tau_direction);
             HadronicTauPairInvalidReason invalid_reason = HadronicTauPairInvalidReason::none;
             const auto solution = make_solution(observation, visible_minus_cm, visible_plus_cm,
                                                 detail::normalized(base, "tangent tau direction cannot vanish"), tau_energy,
